@@ -10,6 +10,12 @@ enum {
   VOXELS_STRIDE
 };
 
+typedef struct {
+  const int width;
+  const int height;
+  const int depth;
+} World;
+
 static const unsigned char maxLight = 32;
 
 static const int neighbors[] = {
@@ -20,12 +26,6 @@ static const int neighbors[] = {
   0, 1, 0,
   0, -1, 0
 };
-
-typedef struct {
-  const int width;
-  const int height;
-  const int depth;
-} World;
 
 static const int getVoxel(
   const World *world,
