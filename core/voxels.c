@@ -130,32 +130,32 @@ static void pushFace(
   unsigned char *vertices,
   const int chunkX, const int chunkY, const int chunkZ,
   const unsigned char r, const unsigned char g, const unsigned char b,
-  unsigned char x1, unsigned char y1, unsigned char z1, const float l1,
-  unsigned char x2, unsigned char y2, unsigned char z2, const float l2,
-  unsigned char x3, unsigned char y3, unsigned char z3, const float l3,
-  unsigned char x4, unsigned char y4, unsigned char z4, const float l4
+  const int wx1, const int wy1, const int wz1, const float l1,
+  const int wx2, const int wy2, const int wz2, const float l2,
+  const int wx3, const int wy3, const int wz3, const float l3,
+  const int wx4, const int wy4, const int wz4, const float l4
 ) {
   const unsigned int vertex = *faces * 4;
   const unsigned int vertexOffset = vertex * 6;
   const unsigned int indexOffset = *faces * 6;
   const unsigned int flipFace = l1 + l3 < l2 + l4 ? 1 : 0; // Fixes interpolation anisotropy
-  (*faces)++;
-  x1 -= chunkX;
-  y1 -= chunkY;
-  z1 -= chunkZ;
+  const unsigned char x1 = wx1 - chunkX;
+  const unsigned char y1 = wy1 - chunkY;
+  const unsigned char z1 = wz1 - chunkZ;
+  const unsigned char x2 = wx2 - chunkX;
+  const unsigned char y2 = wy2 - chunkY;
+  const unsigned char z2 = wz2 - chunkZ;
+  const unsigned char x3 = wx3 - chunkX;
+  const unsigned char y3 = wy3 - chunkY;
+  const unsigned char z3 = wz3 - chunkZ;
+  const unsigned char x4 = wx4 - chunkX;
+  const unsigned char y4 = wy4 - chunkY;
+  const unsigned char z4 = wz4 - chunkZ;
   growBox(box, x1, y1, z1);
-  x2 -= chunkX;
-  y2 -= chunkY;
-  z2 -= chunkZ;
   growBox(box, x2, y2, z2);
-  x3 -= chunkX;
-  y3 -= chunkY;
-  z3 -= chunkZ;
   growBox(box, x3, y3, z3);
-  x4 -= chunkX;
-  y4 -= chunkY;
-  z4 -= chunkZ;
   growBox(box, x4, y4, z4);
+  (*faces)++;
   // Is this crazy? I dunno. You tell me.
   vertices[vertexOffset] = x1;
   vertices[vertexOffset + 1] = y1;
