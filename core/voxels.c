@@ -610,5 +610,5 @@ void simulate(
         voxels[voxel + VOXEL_B] = 0;
       }
     }
-   }
+  }
 }
