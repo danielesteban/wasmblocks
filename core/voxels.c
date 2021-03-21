@@ -268,14 +268,13 @@ void removeLight(
         y + neighbors[n * 3 + 1],
         z + neighbors[n * 3 + 2]
       );
-      if (
-        neighbor == -1
-        || voxels[neighbor] != 0
-        || voxels[neighbor + VOXEL_LIGHT] == 0
-      ) {
+      if (neighbor == -1 || voxels[neighbor] != 0) {
         continue;
       }
       const unsigned char nl = voxels[neighbor + VOXEL_LIGHT];
+      if (nl == 0) {
+        continue;
+      }
       if (
         nl < light
         || (
