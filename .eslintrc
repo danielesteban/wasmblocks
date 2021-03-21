@@ -1,0 +1,27 @@
+{
+  "root": true,
+  "env": {
+    "browser": true
+  },
+  "extends": [
+    "airbnb-base"
+  ],
+  "plugins": [
+    "import"
+  ],
+  "rules": {
+    "comma-dangle": ["error", {
+      "arrays": "always-multiline",
+      "objects": "always-multiline",
+      "imports": "always-multiline",
+      "exports": "always-multiline",
+      "functions": "never"
+    }],
+    "import/extensions": 0,
+    "import/named": 0,
+    "no-bitwise": 0,
+    "no-param-reassign": 0,
+    "no-shadow": 0,
+    "no-underscore-dangle": 0
+  }
+}
