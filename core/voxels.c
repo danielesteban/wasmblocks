@@ -151,11 +151,11 @@ static void pushFace(
                       x4 = wx4 - chunkX,
                       y4 = wy4 - chunkY,
                       z4 = wz4 - chunkZ;
+  (*faces)++;
   growBox(box, x1, y1, z1);
   growBox(box, x2, y2, z2);
   growBox(box, x3, y3, z3);
   growBox(box, x4, y4, z4);
-  (*faces)++;
   // Is this crazy? I dunno. You tell me.
   vertices[vertexOffset] = x1;
   vertices[vertexOffset + 1] = y1;
