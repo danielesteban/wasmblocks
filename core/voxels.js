@@ -45,11 +45,11 @@ class VoxelWorld {
         layout.forEach(({ id, type, size }) => {
           this[id] = {
             address,
-            buffer: new type(memory.buffer, address, size),
+            view: new type(memory.buffer, address, size),
           };
           address += size * type.BYTES_PER_ELEMENT;
         });
-        this.world.buffer.set([width, height, depth]);
+        this.world.view.set([width, height, depth]);
         if (onLoad) {
           onLoad(this);
         }
@@ -72,8 +72,8 @@ class VoxelWorld {
       heightmap,
       voxels,
     } = this;
-    heightmap.buffer.fill(0);
-    voxels.buffer.fill(0);
+    heightmap.view.fill(0);
+    voxels.view.fill(0);
     this._generate(
       world.address,
       heightmap.address,
@@ -124,11 +124,11 @@ class VoxelWorld {
       throw new Error('Requested chunk is out of bounds');
     }
     return {
-      bounds: new Float32Array(bounds.buffer),
+      bounds: new Float32Array(bounds.view),
       indices: new ((faces * 4 - 1) <= 65535 ? Uint16Array : Uint32Array)(
-        indices.buffer.subarray(0, faces * 6)
+        indices.view.subarray(0, faces * 6)
       ),
-      vertices: new Uint8Array(vertices.buffer.subarray(0, faces * 4 * 6)),
+      vertices: new Uint8Array(vertices.view.subarray(0, faces * 4 * 6)),
     };
   }
 
@@ -154,29 +154,29 @@ class VoxelWorld {
       return;
     }
     const voxel = this.getVoxel(x, y, z);
-    const current = voxels.buffer[voxel];
-    voxels.buffer.set([type, r, g, b], voxel);
+    const current = voxels.view[voxel];
+    voxels.view.set([type, r, g, b], voxel);
     {
       const heightIndex = (z * width) + x;
-      const voxelHeight = heightmap.buffer[heightIndex];
+      const voxelHeight = heightmap.view[heightIndex];
       if (type === 0) {
         if (y === voxelHeight) {
           for (let h = y - 1; h >= 0; h -= 1) {
-            if (h === 0 || voxels.buffer[this.getVoxel(x, h, z)] !== 0) {
-              heightmap.buffer[heightIndex] = h;
+            if (h === 0 || voxels.view[this.getVoxel(x, h, z)] !== 0) {
+              heightmap.view[heightIndex] = h;
               break;
             }
           }
         }
       } else if (voxelHeight < y) {
-        heightmap.buffer[heightIndex] = y;
+        heightmap.view[heightIndex] = y;
       }
     }
     if (current === 0 && type !== 0) {
-      const light = voxels.buffer[voxel + fields.light];
+      const light = voxels.view[voxel + fields.light];
       if (light !== 0) {
-        voxels.buffer[voxel + fields.light] = 0;
-        queueA.buffer.set([voxel, light]);
+        voxels.view[voxel + fields.light] = 0;
+        queueA.view.set([voxel, light]);
         this._removeLight(
           world.address,
           heightmap.address,
@@ -197,8 +197,8 @@ class VoxelWorld {
         const ny = y + offset.y;
         const nz = z + offset.z;
         const nv = this.getVoxel(nx, ny, nz);
-        if (nv !== -1 && voxels.buffer[nv + fields.light] !== 0) {
-          queueA.buffer[queued++] = nv;
+        if (nv !== -1 && voxels.view[nv + fields.light] !== 0) {
+          queueA.view[queued++] = nv;
         }
       });
       if (queued > 0) {

@@ -72,7 +72,7 @@ const world = new VoxelWorld({
       spawn
         .add({
           x: 0.5,
-          y: world.heightmap.buffer[spawn.z * world.width + spawn.x] + 1,
+          y: world.heightmap.view[spawn.z * world.width + spawn.x] + 1,
           z: 0.5,
         })
         .multiplyScalar(scale)
