@@ -110,7 +110,7 @@ static const unsigned int getColorFromNoise(unsigned char noise) {
 }
 
 static void growBox(
-  int *box,
+  unsigned char *box,
   const unsigned char x,
   const unsigned char y,
   const unsigned char z
@@ -124,7 +124,7 @@ static void growBox(
 }
 
 static void pushFace(
-  int *box,
+  unsigned char *box,
   unsigned int *faces,
   unsigned int *indices,
   unsigned char *vertices,
@@ -396,7 +396,7 @@ const int mesh(
     return -1;
   }
   // WELCOME TO THE JUNGLE !!
-  int box[6] = { chunkSize, chunkSize, chunkSize, 0, 0, 0 };
+  unsigned char box[6] = { chunkSize, chunkSize, chunkSize, 0, 0, 0 };
   unsigned int faces = 0;
   for (int z = chunkZ; z < chunkZ + chunkSize; z++) {
     for (int y = chunkY; y < chunkY + chunkSize; y++) {
@@ -555,9 +555,9 @@ const int mesh(
       }
     }
   }
-  bounds[0] = (box[0] + box[3]) * 0.5f;
-  bounds[1] = (box[1] + box[4]) * 0.5f;
-  bounds[2] = (box[2] + box[5]) * 0.5f;
+  bounds[0] = 0.5f * (box[0] + box[3]);
+  bounds[1] = 0.5f * (box[1] + box[4]);
+  bounds[2] = 0.5f * (box[2] + box[5]);
   const float halfWidth = 0.5f * (box[3] - box[0]);
   const float halfHeight = 0.5f * (box[4] - box[1]);
   const float halfDepth = 0.5f * (box[5] - box[2]);
