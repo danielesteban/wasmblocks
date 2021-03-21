@@ -56,8 +56,8 @@ class VoxelChunk extends Mesh {
     geometry.setAttribute('position', new InterleavedBufferAttribute(vertices, 3, 0));
     geometry.setAttribute('color', new InterleavedBufferAttribute(vertices, 3, 3));
     if (geometry.boundingSphere === null) {
-			geometry.boundingSphere = new Sphere();
-		}
+      geometry.boundingSphere = new Sphere();
+    }
     geometry.boundingSphere.set({ x: bounds[0], y: bounds[1], z: bounds[2] }, bounds[3]);
   }
 
