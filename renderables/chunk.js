@@ -14,9 +14,7 @@ class VoxelChunk extends Mesh {
   static setupMaterial() {
     const { uniforms, vertexShader, fragmentShader } = ShaderLib.basic;
     VoxelChunk.material = new ShaderMaterial({
-      uniforms: {
-        ...UniformsUtils.clone(uniforms),
-      },
+      uniforms: UniformsUtils.clone(uniforms),
       vertexShader: vertexShader
         .replace(
           '#include <color_vertex>',
