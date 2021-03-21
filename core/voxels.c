@@ -1,11 +1,14 @@
 #define FNL_IMPL
 #include "../vendor/FastNoiseLite.h"
 
-typedef struct {
-  const int width;
-  const int height;
-  const int depth;
-} World;
+enum {
+  VOXEL_TYPE,
+  VOXEL_R,
+  VOXEL_G,
+  VOXEL_B,
+  VOXEL_LIGHT,
+  VOXELS_STRIDE
+};
 
 static const unsigned char maxLight = 32;
 
@@ -17,6 +20,12 @@ static const int neighbors[] = {
   0, 1, 0,
   0, -1, 0
 };
+
+typedef struct {
+  const int width;
+  const int height;
+  const int depth;
+} World;
 
 static const int getVoxel(
   const World *world,
@@ -31,7 +40,7 @@ static const int getVoxel(
   ) {
     return -1;
   }
-  return (z * world->width * world->height + y * world->width + x) * 5;
+  return (z * world->width * world->height + y * world->width + x) * VOXELS_STRIDE;
 }
 
 static const float getLight(
@@ -58,15 +67,15 @@ static const float getLight(
     const unsigned char v2 = (n2 != -1 && voxels[n2] == 0) ? 1 : 0;
     const unsigned char v3 = (n3 != -1 && voxels[n3] == 0) ? 1 : 0;
     if (v1 == 1) {
-      sunlight += voxels[n1 + 4];
+      sunlight += voxels[n1 + VOXEL_LIGHT];
       n++;
     }
     if (v2 == 1) {
-      sunlight += voxels[n2 + 4];
+      sunlight += voxels[n2 + VOXEL_LIGHT];
       n++;
     }
     if ((v1 == 1 || v2 == 1) && v3 == 1) {
-      sunlight += voxels[n3 + 4];
+      sunlight += voxels[n3 + VOXEL_LIGHT];
       n++;
     }
     sunlight = sunlight / n / maxLight;
@@ -126,10 +135,10 @@ static void pushFace(
   unsigned char x3, unsigned char y3, unsigned char z3, const float l3,
   unsigned char x4, unsigned char y4, unsigned char z4, const float l4
 ) {
-  const int vertex = *faces * 4;
-  const int vertexOffset = vertex * 6;
-  const int indexOffset = *faces * 6;
-  const int flipFace = l1 + l3 < l2 + l4 ? 1 : 0; // Fixes interpolation anisotropy
+  const unsigned int vertex = *faces * 4;
+  const unsigned int vertexOffset = vertex * 6;
+  const unsigned int indexOffset = *faces * 6;
+  const unsigned int flipFace = l1 + l3 < l2 + l4 ? 1 : 0; // Fixes interpolation anisotropy
   (*faces)++;
   x1 -= chunkX;
   y1 -= chunkY;
@@ -191,7 +200,7 @@ void floodLight(
   unsigned int nextLength = 0;
   for (unsigned int i = 0; i < size; i++) {
     const int voxel = queue[i];
-    const unsigned char light = voxels[voxel + 4];
+    const unsigned char light = voxels[voxel + VOXEL_LIGHT];
     if (light == 0) {
       continue;
     }
@@ -213,11 +222,11 @@ void floodLight(
           && light == maxLight
           && ny > heightmap[(nz * world->width) + nx]
         )
-        || voxels[neighbor + 4] >= nl
+        || voxels[neighbor + VOXEL_LIGHT] >= nl
       ) {
         continue;
       }
-      voxels[neighbor + 4] = nl;
+      voxels[neighbor + VOXEL_LIGHT] = nl;
       next[nextLength++] = neighbor;
     }
   }
@@ -262,11 +271,11 @@ void removeLight(
       if (
         neighbor == -1
         || voxels[neighbor] != 0
-        || voxels[neighbor + 4] == 0
+        || voxels[neighbor + VOXEL_LIGHT] == 0
       ) {
         continue;
       }
-      const unsigned char nl = voxels[neighbor + 4];
+      const unsigned char nl = voxels[neighbor + VOXEL_LIGHT];
       if (
         nl < light
         || (
@@ -277,7 +286,7 @@ void removeLight(
       ) {
         next[nextLength++] = neighbor;
         next[nextLength++] = nl;
-        voxels[neighbor + 4] = 0;
+        voxels[neighbor + VOXEL_LIGHT] = 0;
       } else if (nl >= light) {
         floodQueue[floodQueueSize++] = neighbor;
       }
@@ -325,9 +334,9 @@ void generate(
           const int voxel = getVoxel(world, x, y, z);
           const unsigned int color = getColorFromNoise(0xFF * n);
           voxels[voxel] = 0x01;
-          voxels[voxel + 1] = (color >> 16) & 0xFF;
-          voxels[voxel + 2] = (color >> 8) & 0xFF;
-          voxels[voxel + 3] = color & 0xFF;
+          voxels[voxel + VOXEL_R] = (color >> 16) & 0xFF;
+          voxels[voxel + VOXEL_G] = (color >> 8) & 0xFF;
+          voxels[voxel + VOXEL_B] = color & 0xFF;
           const int heightmapIndex = z * world->width + x;
           if (heightmap[heightmapIndex] < y) {
             heightmap[heightmapIndex] = y;
@@ -350,10 +359,10 @@ void propagate(
     for (int y = 0; y < world->height; y++) {
       for (int x = 0; x < world->width; x++, voxel += 5) {
         if (y == (world->height - 1) && voxels[voxel] == 0) {
-          voxels[voxel + 4] = maxLight;
+          voxels[voxel + VOXEL_LIGHT] = maxLight;
           queueA[queueSize++] = voxel;
         } else {
-          voxels[voxel + 4] = 0;
+          voxels[voxel + VOXEL_LIGHT] = 0;
         }
       }
     }
@@ -396,9 +405,9 @@ const int mesh(
         if (voxels[voxel] == 0) {
           continue;
         }
-        const unsigned char r = voxels[voxel + 1];
-        const unsigned char g = voxels[voxel + 2];
-        const unsigned char b = voxels[voxel + 3];
+        const unsigned char r = voxels[voxel + VOXEL_R];
+        const unsigned char g = voxels[voxel + VOXEL_G];
+        const unsigned char b = voxels[voxel + VOXEL_B];
         const int top = getVoxel(world, x, y + 1, z);
         const int bottom = getVoxel(world, x, y - 1, z);
         const int south = getVoxel(world, x, y, z + 1);
@@ -406,7 +415,7 @@ const int mesh(
         const int east = getVoxel(world, x + 1, y, z);
         const int west = getVoxel(world, x - 1, y, z);
         if (top != -1 && voxels[top] == 0) {
-          const unsigned char light = voxels[top + 4];
+          const unsigned char light = voxels[top + VOXEL_LIGHT];
           const int ts = getVoxel(world, x, y + 1, z + 1);
           const int tn = getVoxel(world, x, y + 1, z - 1);
           const int te = getVoxel(world, x + 1, y + 1, z);
@@ -429,7 +438,7 @@ const int mesh(
           );
         }
         if (bottom != -1 && voxels[bottom] == 0) {
-          const unsigned char light = voxels[bottom + 4];
+          const unsigned char light = voxels[bottom + VOXEL_LIGHT];
           const int bs = getVoxel(world, x, y - 1, z + 1);
           const int bn = getVoxel(world, x, y - 1, z - 1);
           const int be = getVoxel(world, x + 1, y - 1, z);
@@ -452,7 +461,7 @@ const int mesh(
           );
         }
         if (south != -1 && voxels[south] == 0) {
-          const unsigned char light = voxels[south + 4];
+          const unsigned char light = voxels[south + VOXEL_LIGHT];
           const int st = getVoxel(world, x, y + 1, z + 1);
           const int sb = getVoxel(world, x, y - 1, z + 1);
           const int se = getVoxel(world, x + 1, y, z + 1);
@@ -475,7 +484,7 @@ const int mesh(
           );
         }
         if (north != -1 && voxels[north] == 0) {
-          const unsigned char light = voxels[north + 4];
+          const unsigned char light = voxels[north + VOXEL_LIGHT];
           const int nt = getVoxel(world, x, y + 1, z - 1);
           const int nb = getVoxel(world, x, y - 1, z - 1);
           const int ne = getVoxel(world, x + 1, y, z - 1);
@@ -498,7 +507,7 @@ const int mesh(
           );
         }
         if (east != -1 && voxels[east] == 0) {
-          const unsigned char light = voxels[east + 4];
+          const unsigned char light = voxels[east + VOXEL_LIGHT];
           const int et = getVoxel(world, x + 1, y + 1, z);
           const int eb = getVoxel(world, x + 1, y - 1, z);
           const int es = getVoxel(world, x + 1, y, z + 1);
@@ -521,7 +530,7 @@ const int mesh(
           );
         }
         if (west != -1 && voxels[west] == 0) {
-          const unsigned char light = voxels[west + 4];
+          const unsigned char light = voxels[west + VOXEL_LIGHT];
           const int wt = getVoxel(world, x - 1, y + 1, z);
           const int wb = getVoxel(world, x - 1, y - 1, z);
           const int ws = getVoxel(world, x - 1, y, z + 1);
@@ -593,13 +602,13 @@ void simulate(
           }
         }
         voxels[neighbor] = voxels[voxel];
-        voxels[neighbor + 1] = voxels[voxel + 1];
-        voxels[neighbor + 2] = voxels[voxel + 2];
-        voxels[neighbor + 3] = voxels[voxel + 3];
+        voxels[neighbor + VOXEL_R] = voxels[voxel + VOXEL_R];
+        voxels[neighbor + VOXEL_G] = voxels[voxel + VOXEL_G];
+        voxels[neighbor + VOXEL_B] = voxels[voxel + VOXEL_B];
         voxels[voxel] = 0;
-        voxels[voxel + 1] = 0;
-        voxels[voxel + 2] = 0;
-        voxels[voxel + 3] = 0;
+        voxels[voxel + VOXEL_R] = 0;
+        voxels[voxel + VOXEL_G] = 0;
+        voxels[voxel + VOXEL_B] = 0;
       }
     }
    }
