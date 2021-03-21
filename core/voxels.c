@@ -28,7 +28,7 @@ static const int neighbors[] = {
 };
 
 static const int getVoxel(
-  const World *world,
+  const World* world,
   const int x,
   const int y,
   const int z
@@ -44,17 +44,17 @@ static const int getVoxel(
 }
 
 static const float getLight(
-  unsigned char *voxels,
-  unsigned char light,
+  unsigned char* voxels,
+  const unsigned char light,
   const int n1,
   const int n2,
   const int n3
 ) {
   float ao = 0.0f;
   {
-    const unsigned char v1 = (n1 != -1 && voxels[n1] != 0) ? 1 : 0;
-    const unsigned char v2 = (n2 != -1 && voxels[n2] != 0) ? 1 : 0;
-    const unsigned char v3 = (n3 != -1 && voxels[n3] != 0) ? 1 : 0;
+    const unsigned char v1 = (n1 != -1 && voxels[n1] != 0) ? 1 : 0,
+                        v2 = (n2 != -1 && voxels[n2] != 0) ? 1 : 0,
+                        v3 = (n3 != -1 && voxels[n3] != 0) ? 1 : 0;
     if (v1 == 1) ao += 0.1f;
     if (v2 == 1) ao += 0.1f;
     if ((v1 == 1 && v2 == 1) || v3 == 1) ao += 0.1f;
@@ -62,10 +62,10 @@ static const float getLight(
 
   float sunlight = light;
   {
+    const unsigned char v1 = (n1 != -1 && voxels[n1] == 0) ? 1 : 0,
+                        v2 = (n2 != -1 && voxels[n2] == 0) ? 1 : 0,
+                        v3 = (n3 != -1 && voxels[n3] == 0) ? 1 : 0;
     unsigned char n = 1;
-    const unsigned char v1 = (n1 != -1 && voxels[n1] == 0) ? 1 : 0;
-    const unsigned char v2 = (n2 != -1 && voxels[n2] == 0) ? 1 : 0;
-    const unsigned char v3 = (n3 != -1 && voxels[n3] == 0) ? 1 : 0;
     if (v1 == 1) {
       sunlight += voxels[n1 + VOXEL_LIGHT];
       n++;
@@ -110,7 +110,7 @@ static const unsigned int getColorFromNoise(unsigned char noise) {
 }
 
 static void growBox(
-  unsigned char *box,
+  unsigned char* box,
   const unsigned char x,
   const unsigned char y,
   const unsigned char z
@@ -124,10 +124,10 @@ static void growBox(
 }
 
 static void pushFace(
-  unsigned char *box,
-  unsigned int *faces,
-  unsigned int *indices,
-  unsigned char *vertices,
+  unsigned char* box,
+  unsigned int* faces,
+  unsigned int* indices,
+  unsigned char* vertices,
   const int chunkX, const int chunkY, const int chunkZ,
   const unsigned char r, const unsigned char g, const unsigned char b,
   const int wx1, const int wy1, const int wz1, const float l1,
@@ -135,22 +135,22 @@ static void pushFace(
   const int wx3, const int wy3, const int wz3, const float l3,
   const int wx4, const int wy4, const int wz4, const float l4
 ) {
-  const unsigned int vertex = *faces * 4;
-  const unsigned int vertexOffset = vertex * 6;
-  const unsigned int indexOffset = *faces * 6;
-  const unsigned int flipFace = l1 + l3 < l2 + l4 ? 1 : 0; // Fixes interpolation anisotropy
-  const unsigned char x1 = wx1 - chunkX;
-  const unsigned char y1 = wy1 - chunkY;
-  const unsigned char z1 = wz1 - chunkZ;
-  const unsigned char x2 = wx2 - chunkX;
-  const unsigned char y2 = wy2 - chunkY;
-  const unsigned char z2 = wz2 - chunkZ;
-  const unsigned char x3 = wx3 - chunkX;
-  const unsigned char y3 = wy3 - chunkY;
-  const unsigned char z3 = wz3 - chunkZ;
-  const unsigned char x4 = wx4 - chunkX;
-  const unsigned char y4 = wy4 - chunkY;
-  const unsigned char z4 = wz4 - chunkZ;
+  const unsigned int  vertex = *faces * 4,
+                      vertexOffset = vertex * 6,
+                      indexOffset = *faces * 6,
+                      flipFace = l1 + l3 < l2 + l4 ? 1 : 0; // Fixes interpolation anisotropy
+  const unsigned char x1 = wx1 - chunkX,
+                      y1 = wy1 - chunkY,
+                      z1 = wz1 - chunkZ,
+                      x2 = wx2 - chunkX,
+                      y2 = wy2 - chunkY,
+                      z2 = wz2 - chunkZ,
+                      x3 = wx3 - chunkX,
+                      y3 = wy3 - chunkY,
+                      z3 = wz3 - chunkZ,
+                      x4 = wx4 - chunkX,
+                      y4 = wy4 - chunkY,
+                      z4 = wz4 - chunkZ;
   growBox(box, x1, y1, z1);
   growBox(box, x2, y2, z2);
   growBox(box, x3, y3, z3);
@@ -190,12 +190,12 @@ static void pushFace(
 }
 
 void floodLight(
-  const World *world,
-  int *heightmap,
-  unsigned char *voxels,
-  int *queue,
+  const World* world,
+  int* heightmap,
+  unsigned char* voxels,
+  int* queue,
   const int size,
-  int *next
+  int* next
 ) {
   unsigned int nextLength = 0;
   for (unsigned int i = 0; i < size; i++) {
@@ -204,14 +204,14 @@ void floodLight(
     if (light == 0) {
       continue;
     }
-    const int index = voxel / 5;
-    const int z = _fnlFastFloor(index / (world->width * world->height));
-    const int y = _fnlFastFloor((index % (world->width * world->height)) / world->width);
-    const int x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
+    const int index = voxel / 5,
+              z = _fnlFastFloor(index / (world->width * world->height)),
+              y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
+              x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
     for (unsigned char n = 0; n < 6; n += 1) {
-      const int nx = x + neighbors[n * 3];
-      const int ny = y + neighbors[n * 3 + 1];
-      const int nz = z + neighbors[n * 3 + 2];
+      const int nx = x + neighbors[n * 3],
+                ny = y + neighbors[n * 3 + 1],
+                nz = z + neighbors[n * 3 + 2];
       const int neighbor = getVoxel(world, nx, ny, nz);
       const unsigned char nl = n == 5 && light == maxLight ? light : light - 1;
       if (
@@ -243,24 +243,24 @@ void floodLight(
 }
 
 void removeLight(
-  const World *world,
-  int *heightmap,
-  unsigned char *voxels,
-  int *queue,
+  const World* world,
+  int* heightmap,
+  unsigned char* voxels,
+  int* queue,
   const int size,
-  int *next,
-  int *floodQueue,
+  int* next,
+  int* floodQueue,
   int floodQueueSize,
-  int *floodNext
+  int* floodNext
 ) {
   int nextLength = 0;
   for (int i = 0; i < size; i += 2) {
     const int voxel = queue[i];
     const unsigned char light = queue[i + 1];
-    const int index = voxel / 5;
-    const int z = _fnlFastFloor(index / (world->width * world->height));
-    const int y = _fnlFastFloor((index % (world->width * world->height)) / world->width);
-    const int x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
+    const int index = voxel / 5,
+              z = _fnlFastFloor(index / (world->width * world->height)),
+              y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
+              x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
     for (unsigned char n = 0; n < 6; n += 1) {
       const int neighbor = getVoxel(
         world,
@@ -317,9 +317,9 @@ void removeLight(
 }
 
 void generate(
-  const World *world,
-  int *heightmap,
-  unsigned char *voxels,
+  const World* world,
+  int* heightmap,
+  unsigned char* voxels,
   const int seed
 ) {
   fnl_state noise = fnlCreateState();
@@ -331,13 +331,13 @@ void generate(
         const float n = _fnlFastAbs(fnlGetNoise3D(&noise, x, y, z));
         const int h = n * world->height;
         if (y <= h) {
-          const int voxel = getVoxel(world, x, y, z);
           const unsigned int color = getColorFromNoise(0xFF * n);
+          const int voxel = getVoxel(world, x, y, z),
+                    heightmapIndex = z * world->width + x;
           voxels[voxel] = 0x01;
           voxels[voxel + VOXEL_R] = (color >> 16) & 0xFF;
           voxels[voxel + VOXEL_G] = (color >> 8) & 0xFF;
           voxels[voxel + VOXEL_B] = color & 0xFF;
-          const int heightmapIndex = z * world->width + x;
           if (heightmap[heightmapIndex] < y) {
             heightmap[heightmapIndex] = y;
           }
@@ -348,11 +348,11 @@ void generate(
 }
 
 void propagate(
-  const World *world,
-  int *heightmap,
-  unsigned char *voxels,
-  int *queueA,
-  int *queueB
+  const World* world,
+  int* heightmap,
+  unsigned char* voxels,
+  int* queueA,
+  int* queueB
 ) {
   int queueSize = 0;
   for (int z = 0, voxel = 0; z < world->depth; z++) {
@@ -378,15 +378,15 @@ void propagate(
 }
 
 const int mesh(
-  const World *world,
+  const World* world,
   const int chunkX,
   const int chunkY,
   const int chunkZ,
   const unsigned char chunkSize,
-  unsigned char *voxels,
-  float *bounds,
-  unsigned int *indices,
-  unsigned char *vertices
+  unsigned char* voxels,
+  float* bounds,
+  unsigned int* indices,
+  unsigned char* vertices
 ) {
   if (
     chunkX + chunkSize > world->width
@@ -405,21 +405,21 @@ const int mesh(
         if (voxels[voxel] == 0) {
           continue;
         }
-        const unsigned char r = voxels[voxel + VOXEL_R];
-        const unsigned char g = voxels[voxel + VOXEL_G];
-        const unsigned char b = voxels[voxel + VOXEL_B];
-        const int top = getVoxel(world, x, y + 1, z);
-        const int bottom = getVoxel(world, x, y - 1, z);
-        const int south = getVoxel(world, x, y, z + 1);
-        const int north = getVoxel(world, x, y, z - 1);
-        const int east = getVoxel(world, x + 1, y, z);
-        const int west = getVoxel(world, x - 1, y, z);
+        const unsigned char r = voxels[voxel + VOXEL_R],
+                            g = voxels[voxel + VOXEL_G],
+                            b = voxels[voxel + VOXEL_B];
+        const int top = getVoxel(world, x, y + 1, z),
+                  bottom = getVoxel(world, x, y - 1, z),
+                  south = getVoxel(world, x, y, z + 1),
+                  north = getVoxel(world, x, y, z - 1),
+                  east = getVoxel(world, x + 1, y, z),
+                  west = getVoxel(world, x - 1, y, z);
         if (top != -1 && voxels[top] == 0) {
           const unsigned char light = voxels[top + VOXEL_LIGHT];
-          const int ts = getVoxel(world, x, y + 1, z + 1);
-          const int tn = getVoxel(world, x, y + 1, z - 1);
-          const int te = getVoxel(world, x + 1, y + 1, z);
-          const int tw = getVoxel(world, x - 1, y + 1, z);
+          const int ts = getVoxel(world, x, y + 1, z + 1),
+                    tn = getVoxel(world, x, y + 1, z - 1),
+                    te = getVoxel(world, x + 1, y + 1, z),
+                    tw = getVoxel(world, x - 1, y + 1, z);
           pushFace(
             box,
             &faces,
@@ -439,10 +439,10 @@ const int mesh(
         }
         if (bottom != -1 && voxels[bottom] == 0) {
           const unsigned char light = voxels[bottom + VOXEL_LIGHT];
-          const int bs = getVoxel(world, x, y - 1, z + 1);
-          const int bn = getVoxel(world, x, y - 1, z - 1);
-          const int be = getVoxel(world, x + 1, y - 1, z);
-          const int bw = getVoxel(world, x - 1, y - 1, z);
+          const int bs = getVoxel(world, x, y - 1, z + 1),
+                    bn = getVoxel(world, x, y - 1, z - 1),
+                    be = getVoxel(world, x + 1, y - 1, z),
+                    bw = getVoxel(world, x - 1, y - 1, z);
           pushFace(
             box,
             &faces,
@@ -462,10 +462,10 @@ const int mesh(
         }
         if (south != -1 && voxels[south] == 0) {
           const unsigned char light = voxels[south + VOXEL_LIGHT];
-          const int st = getVoxel(world, x, y + 1, z + 1);
-          const int sb = getVoxel(world, x, y - 1, z + 1);
-          const int se = getVoxel(world, x + 1, y, z + 1);
-          const int sw = getVoxel(world, x - 1, y, z + 1);
+          const int st = getVoxel(world, x, y + 1, z + 1),
+                    sb = getVoxel(world, x, y - 1, z + 1),
+                    se = getVoxel(world, x + 1, y, z + 1),
+                    sw = getVoxel(world, x - 1, y, z + 1);
           pushFace(
             box,
             &faces,
@@ -485,10 +485,10 @@ const int mesh(
         }
         if (north != -1 && voxels[north] == 0) {
           const unsigned char light = voxels[north + VOXEL_LIGHT];
-          const int nt = getVoxel(world, x, y + 1, z - 1);
-          const int nb = getVoxel(world, x, y - 1, z - 1);
-          const int ne = getVoxel(world, x + 1, y, z - 1);
-          const int nw = getVoxel(world, x - 1, y, z - 1);
+          const int nt = getVoxel(world, x, y + 1, z - 1),
+                    nb = getVoxel(world, x, y - 1, z - 1),
+                    ne = getVoxel(world, x + 1, y, z - 1),
+                    nw = getVoxel(world, x - 1, y, z - 1);
           pushFace(
             box,
             &faces,
@@ -508,10 +508,10 @@ const int mesh(
         }
         if (east != -1 && voxels[east] == 0) {
           const unsigned char light = voxels[east + VOXEL_LIGHT];
-          const int et = getVoxel(world, x + 1, y + 1, z);
-          const int eb = getVoxel(world, x + 1, y - 1, z);
-          const int es = getVoxel(world, x + 1, y, z + 1);
-          const int en = getVoxel(world, x + 1, y, z - 1);
+          const int et = getVoxel(world, x + 1, y + 1, z),
+                    eb = getVoxel(world, x + 1, y - 1, z),
+                    es = getVoxel(world, x + 1, y, z + 1),
+                    en = getVoxel(world, x + 1, y, z - 1);
           pushFace(
             box,
             &faces,
@@ -531,10 +531,10 @@ const int mesh(
         }
         if (west != -1 && voxels[west] == 0) {
           const unsigned char light = voxels[west + VOXEL_LIGHT];
-          const int wt = getVoxel(world, x - 1, y + 1, z);
-          const int wb = getVoxel(world, x - 1, y - 1, z);
-          const int ws = getVoxel(world, x - 1, y, z + 1);
-          const int wn = getVoxel(world, x - 1, y, z - 1);
+          const int wt = getVoxel(world, x - 1, y + 1, z),
+                    wb = getVoxel(world, x - 1, y - 1, z),
+                    ws = getVoxel(world, x - 1, y, z + 1),
+                    wn = getVoxel(world, x - 1, y, z - 1);
           pushFace(
             box,
             &faces,
@@ -558,9 +558,9 @@ const int mesh(
   bounds[0] = 0.5f * (box[0] + box[3]);
   bounds[1] = 0.5f * (box[1] + box[4]);
   bounds[2] = 0.5f * (box[2] + box[5]);
-  const float halfWidth = 0.5f * (box[3] - box[0]);
-  const float halfHeight = 0.5f * (box[4] - box[1]);
-  const float halfDepth = 0.5f * (box[5] - box[2]);
+  const float halfWidth = 0.5f * (box[3] - box[0]),
+              halfHeight = 0.5f * (box[4] - box[1]),
+              halfDepth = 0.5f * (box[5] - box[2]);
   bounds[3] = sqrt(
     halfWidth * halfWidth
     + halfHeight * halfHeight
@@ -570,9 +570,9 @@ const int mesh(
 }
 
 void simulate(
-  const World *world,
-  int *heightmap,
-  unsigned char *voxels
+  const World* world,
+  int* heightmap,
+  unsigned char* voxels
 ) {
   // This is mainly just for testing
   // Doing animations like this requires full repropagation
