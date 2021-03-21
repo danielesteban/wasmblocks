@@ -89,7 +89,7 @@ const world = new VoxelWorld({
             scale,
           });
           meshes.push(chunk);
-          if (chunk.geometry.getIndex()) {
+          if (chunk.geometry.getIndex() !== null) {
             voxels.add(chunk);
           }
         }
@@ -110,11 +110,11 @@ const world = new VoxelWorld({
         for (let y = 0; y <= topY; y += 1) {
           const mesh = meshes[z * chunks.x * chunks.y + y * chunks.x + x];
           const geometry = world.mesh(x, y, z);
-          if (geometry.indices.length) {
+          if (geometry.indices.length > 0) {
             mesh.update(geometry);
             if (!mesh.parent) voxels.add(mesh);
-          } else {
-            if (mesh.parent) voxels.remove(mesh);
+          } else if (mesh.parent) {
+            voxels.remove(mesh);
           }
         }
       });
