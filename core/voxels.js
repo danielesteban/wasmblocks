@@ -29,11 +29,13 @@ class VoxelWorld {
       total + size * type.BYTES_PER_ELEMENT
     ), 0) / 65536) + 1;
     const memory = new WebAssembly.Memory({ initial: pages, maximum: pages });
-    fetch(wasm)
-      .then((res) => res.arrayBuffer())
-      .then((buffer) => (
+    (WebAssembly.instantiateStreaming ? (
+      WebAssembly.instantiateStreaming(fetch(wasm), { env: { memory } })
+    ) : (
+      fetch(wasm).then((res) => res.arrayBuffer()).then((buffer) => (
         WebAssembly.instantiate(buffer, { env: { memory } })
       ))
+    ))
       .then(({ instance }) => {
         this._generate = instance.exports.generate;
         this._floodLight = instance.exports.floodLight;
