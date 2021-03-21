@@ -11,14 +11,13 @@
 
 #### Dev dependencies
 
-To run this, you'll need to install LLVM:
+To build this, you'll need to install LLVM:
 [https://chocolatey.org/packages/llvm](https://chocolatey.org/packages/llvm)
+
 It will complain about a missing file that you can get here:
 [libclang_rt.builtins-wasm32-wasi-12.0.tar.gz](https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-12/libclang_rt.builtins-wasm32-wasi-12.0.tar.gz)
-Just put it on the same path that the error specifies and you should be good to go.
 
-Also, make sure you downloaded the vendor submodules with: "git submodule init && git submodule update"
-and remember to run "make -j8" on ../vendor/wasi-libc/ before running this.
+Just put it on the same path that the error specifies and you should be good to go.
 
 #### Local development
 
