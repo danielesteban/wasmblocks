@@ -14,7 +14,7 @@ class VoxelWorld {
     const maxFaces = Math.ceil(chunkSize * chunkSize * chunkSize * 0.5) * 6; // worst possible case
     const queueSize = width * depth * 2;
     const layout = [
-      { id: 'voxels', type: Uint8Array, size: width * height * depth * 5 },
+      { id: 'voxels', type: Uint8Array, size: width * height * depth * VoxelWorld.fields.stride },
       { id: 'vertices', type: Uint8Array, size: maxFaces * 4 * 6 },
       { id: 'indices', type: Uint32Array, size: maxFaces * 6 },
       { id: 'heightmap', type: Int32Array, size: width * depth },
@@ -63,7 +63,7 @@ class VoxelWorld {
     if (x < 0 || x >= width || y < 0 || y >= height || z < 0 || z >= depth) {
       return -1;
     }
-    return (z * width * height + y * width + x) * 5;
+    return (z * width * height + y * width + x) * VoxelWorld.fields.stride;
   }
 
   generate(seed) {
@@ -137,6 +137,7 @@ class VoxelWorld {
     x, y, z,
     r, g, b,
   }) {
+    const { fields, neighbors } = VoxelWorld;
     const {
       width,
       height,
@@ -171,31 +172,33 @@ class VoxelWorld {
         heightmap.buffer[heightIndex] = y;
       }
     }
-    if (current === 0 && type !== 0 && voxels.buffer[voxel + 4] !== 0) {
-      queueA.buffer.set([voxel, voxels.buffer[voxel + 4]]);
-      voxels.buffer[voxel + 4] = 0;
-      this._removeLight(
-        world.address,
-        heightmap.address,
-        voxels.address,
-        queueA.address,
-        2,
-        queueB.address,
-        queueC.address,
-        0,
-        queueD.address
-      );
+    if (current === 0 && type !== 0) {
+      const light = voxels.buffer[voxel + fields.light];
+      if (light !== 0) {
+        voxels.buffer[voxel + fields.light] = 0;
+        queueA.buffer.set([voxel, light]);
+        this._removeLight(
+          world.address,
+          heightmap.address,
+          voxels.address,
+          queueA.address,
+          2,
+          queueB.address,
+          queueC.address,
+          0,
+          queueD.address
+        );
+      }
     }
     if (type === 0 && current !== 0) {
       let queued = 0;
-      VoxelWorld.neighbors.forEach((offset) => {
+      neighbors.forEach((offset) => {
         const nx = x + offset.x;
         const ny = y + offset.y;
         const nz = z + offset.z;
         const nv = this.getVoxel(nx, ny, nz);
-        if (nv !== -1 && voxels.buffer[nv + 4] !== 0) {
-          queueA.buffer[queued] = nv;
-          queued += 1;
+        if (nv !== -1 && voxels.buffer[nv + fields.light] !== 0) {
+          queueA.buffer[queued++] = nv;
         }
       });
       if (queued > 0) {
@@ -227,6 +230,15 @@ class VoxelWorld {
     this.propagate();
   }
 }
+
+VoxelWorld.fields = {
+  type: 1,
+  r: 1,
+  g: 2,
+  b: 3,
+  light: 4,
+  stride: 5,
+};
 
 VoxelWorld.neighbors = [
   { x: 1, y: 0, z: 0 },
