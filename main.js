@@ -58,6 +58,7 @@ const world = new VoxelWorld({
     const dome = new Dome(origin);
     const grid = new Grid(origin);
     const voxels = new Group();
+    voxels.matrixAutoUpdate = false;
     scene.add(grid);
     scene.add(voxels);
     scene.add(dome);
