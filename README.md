@@ -31,5 +31,5 @@ cd vendor/wasi-libc/ && make -j8 && cd ../..
 npm install
 # start the dev environment:
 npm start
-# open https://localhost:8080/ in your browser
+# open http://localhost:8080/ in your browser
 ```
