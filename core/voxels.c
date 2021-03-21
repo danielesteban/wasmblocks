@@ -204,7 +204,7 @@ void floodLight(
     if (light == 0) {
       continue;
     }
-    const int index = voxel / 5,
+    const int index = voxel / VOXELS_STRIDE,
               z = _fnlFastFloor(index / (world->width * world->height)),
               y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
               x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
@@ -257,7 +257,7 @@ void removeLight(
   for (int i = 0; i < size; i += 2) {
     const int voxel = queue[i];
     const unsigned char light = queue[i + 1];
-    const int index = voxel / 5,
+    const int index = voxel / VOXELS_STRIDE,
               z = _fnlFastFloor(index / (world->width * world->height)),
               y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
               x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
@@ -356,7 +356,7 @@ void propagate(
   int queueSize = 0;
   for (int z = 0, voxel = 0; z < world->depth; z++) {
     for (int y = 0; y < world->height; y++) {
-      for (int x = 0; x < world->width; x++, voxel += 5) {
+      for (int x = 0; x < world->width; x++, voxel += VOXELS_STRIDE) {
         if (y == (world->height - 1) && voxels[voxel] == 0) {
           voxels[voxel + VOXEL_LIGHT] = maxLight;
           queueA[queueSize++] = voxel;
