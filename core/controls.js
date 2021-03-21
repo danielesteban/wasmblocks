@@ -101,7 +101,7 @@ class Controls {
       brushes.set(key, brush);
     }
     return brush;
-  };
+  }
 
   onAnimationTick({ delta }) {
     const {
