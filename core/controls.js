@@ -57,7 +57,12 @@ class Controls {
   }
 
   dispose() {
-    const { dom, camera, isLocked, listener } = this;
+    const {
+      dom,
+      camera,
+      isLocked,
+      listener,
+    } = this;
     camera.remove(listener);
     document.body.classList.remove('pointerlock');
     window.removeEventListener('blur', this.onBlur);
@@ -113,7 +118,7 @@ class Controls {
       isLocked,
       pointer,
       raycaster,
-      speed
+      speed,
     } = this;
     if (!isLocked) {
       return;
