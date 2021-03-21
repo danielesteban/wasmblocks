@@ -1,3 +1,0 @@
-[submodule "vendor/wasi-libc"]
-	path = vendor/wasi-libc
-	url = https://github.com/WebAssembly/wasi-libc
