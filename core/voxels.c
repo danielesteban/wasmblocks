@@ -211,8 +211,8 @@ void floodLight(
     for (unsigned char n = 0; n < 6; n += 1) {
       const int nx = x + neighbors[n * 3],
                 ny = y + neighbors[n * 3 + 1],
-                nz = z + neighbors[n * 3 + 2];
-      const int neighbor = getVoxel(world, nx, ny, nz);
+                nz = z + neighbors[n * 3 + 2],
+                neighbor = getVoxel(world, nx, ny, nz);
       const unsigned char nl = n == 5 && light == maxLight ? light : light - 1;
       if (
         neighbor == -1
