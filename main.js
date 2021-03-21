@@ -1,4 +1,4 @@
-import '../core/music.js';
+import './core/music.js';
 import Renderer from './core/renderer.js';
 import SFX from './core/sfx.js';
 import VoxelWorld from './core/voxels.js';
@@ -67,7 +67,7 @@ const world = new VoxelWorld({
       const spawn = camera.position.set(
         Math.floor(world.width * 0.5),
         0,
-        Math.floor(world.depth * 0.5),
+        Math.floor(world.depth * 0.5)
       );
       spawn
         .add({
@@ -127,7 +127,9 @@ const world = new VoxelWorld({
       if (!(isPlacing || isRemoving)) {
         return;
       }
-      const hit = raycaster.intersectObjects(isPlacing ? [...voxels.children, grid] : voxels.children)[0];
+      const hit = raycaster.intersectObjects(
+        isPlacing ? [...voxels.children, grid] : voxels.children
+      )[0] || false;
       if (!hit) {
         return;
       }
@@ -167,7 +169,7 @@ const world = new VoxelWorld({
     // Animation test
     // You'll need to reduce the world size first
     // if you want to try this with more than 1fps
-    // 
+    //
     // let t = 0;
     // scene.onAnimationTick = ({ delta }) => {
     //   t += delta;
@@ -197,4 +199,3 @@ const world = new VoxelWorld({
     document.body.removeChild(document.getElementById('loading'));
   },
 });
-

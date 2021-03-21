@@ -28,7 +28,7 @@ class VoxelWorld {
     const pages = Math.ceil(layout.reduce((total, { type, size }) => (
       total + size * type.BYTES_PER_ELEMENT
     ), 0) / 65536) + 1;
-    const memory = new WebAssembly.Memory({ initial: pages, maximum: pages });    
+    const memory = new WebAssembly.Memory({ initial: pages, maximum: pages });
     fetch(wasm)
       .then((res) => res.arrayBuffer())
       .then((buffer) => (
@@ -224,7 +224,7 @@ class VoxelWorld {
       this._simulate(
         world.address,
         heightmap.address,
-        voxels.address,
+        voxels.address
       );
     }
     this.propagate();

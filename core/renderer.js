@@ -2,7 +2,6 @@ import {
   ACESFilmicToneMapping,
   Clock,
   PerspectiveCamera,
-  ShaderChunk,
   sRGBEncoding,
   WebGLRenderer,
 } from '../vendor/three.js';

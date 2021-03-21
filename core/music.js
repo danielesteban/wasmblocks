@@ -185,7 +185,7 @@ const tracks = [
   'Thomas_Kessler/Thomas_Kessler__Ambient_piano_diaries__march_27.mp3',
   'Vangelis/Vangelis__Blade_Runner_Blues.mp3',
   'Vangelis/Vangelis__Soil_Festivities__01__Movement_1.mp3',
-  'Vangelis/Vangelis__Soil_Festivities__02__Movement_2.mp3'
+  'Vangelis/Vangelis__Soil_Festivities__02__Movement_2.mp3',
 ];
 
 // Shuffle tracks
