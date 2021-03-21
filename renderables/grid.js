@@ -13,6 +13,9 @@ class Grid extends Mesh {
 
   static setupMaterial() {
     Grid.material = new ShaderMaterial({
+      uniforms: {
+        fogColor: { value: new Color(0x0a141e) },
+      },
       vertexShader: [
         'varying vec2 gridPosition;',
         'varying vec3 fragPosition;',
@@ -40,9 +43,6 @@ class Grid extends Mesh {
         '  gl_FragColor = vec4(mix(grid, fogColor, fogFactor), 1.0);',
         '}',
       ].join('\n'),
-      uniforms: {
-        fogColor: { value: new Color(0x0a141e) },
-      },
     });
   }
 
