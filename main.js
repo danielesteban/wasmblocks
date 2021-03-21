@@ -26,7 +26,21 @@ const neighbors = [
   { x: 1, z: 1 },
 ];
 const scale = 0.5;
+const scene = new Scene();
+scene.background = new Color(0x0a141e);
+scene.add(camera);
 const sfx = new SFX({ listener: controls.listener });
+let sounds;
+Promise.all([...Array(4)].map(() => (
+  sfx.load('/sounds/plop.ogg')
+    .then((sound) => {
+      sound.filter = sound.context.createBiquadFilter();
+      sound.setFilter(sound.filter);
+      sound.setRefDistance(8);
+      scene.add(sound);
+      return sound;
+    })
+))).then((sfx) => { sounds = sfx; });
 
 const world = new VoxelWorld({
   wasm: '/core/voxels.wasm',
@@ -44,47 +58,9 @@ const world = new VoxelWorld({
     const dome = new Dome(origin);
     const grid = new Grid(origin);
     const voxels = new Group();
-    const scene = new Scene();
-    scene.background = new Color(0x0a141e);
-    scene.add(camera);
     scene.add(grid);
     scene.add(voxels);
     scene.add(dome);
-    let sounds;
-    Promise.all([...Array(4)].map(() => (
-      sfx.load('/sounds/plop.ogg')
-        .then((sound) => {
-          sound.filter = sound.context.createBiquadFilter();
-          sound.setFilter(sound.filter);
-          sound.setRefDistance(8);
-          scene.add(sound);
-          return sound;
-        })
-    ))).then((sfx) => { sounds = sfx; });
-
-    const remesh = ({ x, y, z }) => {
-      const chunkX = Math.floor(x / world.chunkSize);
-      const chunkY = Math.floor(y / world.chunkSize);
-      const chunkZ = Math.floor(z / world.chunkSize);
-      const topY = Math.min(chunkY + 1, chunks.y - 1);
-      neighbors.forEach((neighbor) => {
-        const x = chunkX + neighbor.x;
-        const z = chunkZ + neighbor.z;
-        if (x < 0 || x >= chunks.x || z < 0 || z >= chunks.z) {
-          return;
-        }
-        for (let y = 0; y <= topY; y += 1) {
-          const mesh = meshes[z * chunks.x * chunks.y + y * chunks.x + x];
-          const geometry = world.mesh(x, y, z);
-          if (geometry.indices.length) {
-            mesh.update(geometry);
-            if (!mesh.parent) voxels.add(mesh);
-          } else {
-            if (mesh.parent) voxels.remove(mesh);
-          }
-        }
-      });
-    };
 
     world.generate(Math.floor(Math.random() * 2147483647));
     {
@@ -119,6 +95,30 @@ const world = new VoxelWorld({
         }
       }
     }
+
+    const remesh = ({ x, y, z }) => {
+      const chunkX = Math.floor(x / world.chunkSize);
+      const chunkY = Math.floor(y / world.chunkSize);
+      const chunkZ = Math.floor(z / world.chunkSize);
+      const topY = Math.min(chunkY + 1, chunks.y - 1);
+      neighbors.forEach((neighbor) => {
+        const x = chunkX + neighbor.x;
+        const z = chunkZ + neighbor.z;
+        if (x < 0 || x >= chunks.x || z < 0 || z >= chunks.z) {
+          return;
+        }
+        for (let y = 0; y <= topY; y += 1) {
+          const mesh = meshes[z * chunks.x * chunks.y + y * chunks.x + x];
+          const geometry = world.mesh(x, y, z);
+          if (geometry.indices.length) {
+            mesh.update(geometry);
+            if (!mesh.parent) voxels.add(mesh);
+          } else {
+            if (mesh.parent) voxels.remove(mesh);
+          }
+        }
+      });
+    };
 
     scene.onAnimationTick = () => {
       const { brush, buttons, raycaster } = controls;
