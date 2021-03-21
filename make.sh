@@ -8,7 +8,7 @@
 # Also, make sure you downloaded the vendor submodules with: "git submodule init && git submodule update"
 # and remember to run "make -j8" on ../vendor/wasi-libc/ before running this.
 #
-clang --target=wasm32-unknown-wasi -nostartfiles --sysroot=../vendor/wasi-libc/sysroot -O3 -flto \
+clang --target=wasm32-unknown-wasi -nostartfiles --sysroot=vendor/wasi-libc/sysroot -O3 -flto \
 -Wl,--import-memory -Wl,--lto-O3 -Wl,--no-entry \
 -Wl,--export=__heap_base \
 -Wl,--export=floodLight \
@@ -17,4 +17,4 @@ clang --target=wasm32-unknown-wasi -nostartfiles --sysroot=../vendor/wasi-libc/s
 -Wl,--export=propagate \
 -Wl,--export=mesh \
 -Wl,--export=simulate \
--o voxels.wasm voxels.c
+-o core/voxels.wasm core/voxels.c

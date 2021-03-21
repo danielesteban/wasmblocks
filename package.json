@@ -1,0 +1,21 @@
+{
+  "name": "realms",
+  "author": "Daniel Esteban Nombela",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "watch": {
+    "make": "core/voxels.c"
+  },
+  "scripts": {
+    "make": "sh make.sh",
+    "serve": "sirv --dev -p 8080",
+    "watch": "npm-watch",
+    "start": "run-p serve watch"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "npm-watch": "^0.9.0",
+    "sirv-cli": "^1.0.11"
+  }
+}
