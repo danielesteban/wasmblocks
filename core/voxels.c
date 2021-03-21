@@ -382,7 +382,7 @@ const int mesh(
   const int chunkX,
   const int chunkY,
   const int chunkZ,
-  const int chunkSize,
+  const unsigned char chunkSize,
   unsigned char *voxels,
   float *bounds,
   unsigned int *indices,
