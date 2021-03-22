@@ -112,6 +112,11 @@ class VoxelWorld {
       seed
     );
     if (unlit) {
+      // ToDo/Incomplete
+      // This is a bit of a hack for the animation test.
+      // The ideal solution will be keeping this light levels at 0
+      // and then have an optional parameter in the mesher so it can
+      // ignore the light levels when building the chunk faces
       for (let i = 4, l = voxels.view.length; i < l; i += 5) {
         voxels.view[i] = 32;
       }
