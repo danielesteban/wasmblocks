@@ -522,7 +522,10 @@ const int mesh(
   unsigned char* vertices
 ) {
   if (
-    chunkX + chunkSize > world->width
+    chunkX < 0
+    || chunkY < 0
+    || chunkZ < 0
+    || chunkX + chunkSize > world->width
     || chunkY + chunkSize > world->height
     || chunkZ + chunkSize > world->depth
   ) {
