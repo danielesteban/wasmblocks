@@ -11,9 +11,9 @@
 clang --target=wasm32-unknown-wasi -nostartfiles --sysroot=vendor/wasi-libc/sysroot -O3 -flto \
 -Wl,--import-memory -Wl,--lto-O3 -Wl,--no-entry \
 -Wl,--export=__heap_base \
+-Wl,--export=mesh \
 -Wl,--export=generate \
 -Wl,--export=propagate \
--Wl,--export=mesh \
 -Wl,--export=simulate \
 -Wl,--export=update \
 -o core/voxels.wasm core/voxels.c
