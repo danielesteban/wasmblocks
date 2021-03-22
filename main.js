@@ -166,21 +166,23 @@ const world = new VoxelWorld({
           }
         }
         const color = {
-          r: Math.floor(Math.random() * 256),
-          g: Math.floor(Math.random() * 256),
-          b: Math.floor(Math.random() * 256),
+          r: 0xBB,
+          g: 0xBB,
+          b: 0x55,
         };
         const noise = ((color.r + color.g + color.b) / 3) * brush.noise;
         hit.point
           .divideScalar(scale)
           .addScaledVector(hit.face.normal, isPlacing ? 0.25 : -0.25)
           .floor();
+        brush.shape = isPlacing ? 0 : 1;
+        brush.size = isPlacing ? 2 : 6;
         controls.getBrush(brush).forEach(({ x, y, z }) => (
           world.update({
             x: hit.point.x + x,
             y: hit.point.y + y,
             z: hit.point.z + z,
-            type: isPlacing ? 1 : 0,
+            type: isPlacing ? 2 : 0,
             r: Math.min(Math.max(color.r + (Math.random() - 0.5) * noise, 0), 0xFF),
             g: Math.min(Math.max(color.g + (Math.random() - 0.5) * noise, 0), 0xFF),
             b: Math.min(Math.max(color.b + (Math.random() - 0.5) * noise, 0), 0xFF),

@@ -15,7 +15,7 @@ class VoxelWorld {
     const maxFaces = Math.ceil(chunkSize * chunkSize * chunkSize * 0.5) * 6; // worst possible case
     const queueSize = width * depth * 2;
     const layout = [
-      { id: 'voxels', type: Uint8Array, size: width * height * depth * 5 },
+      { id: 'voxels', type: Uint8Array, size: width * height * depth * 6 },
       { id: 'vertices', type: Uint8Array, size: maxFaces * 4 * 6 },
       { id: 'indices', type: Uint32Array, size: maxFaces * 6 },
       { id: 'heightmap', type: Int32Array, size: width * depth },
@@ -118,11 +118,11 @@ class VoxelWorld {
       // The ideal solution will be keeping this light levels at 0
       // and then have an optional parameter in the mesher so it can
       // ignore the light levels when building the chunk faces
-      for (let i = 0, l = voxels.view.length; i < l; i += 5) {
+      for (let i = 0, l = voxels.view.length; i < l; i += 6) {
         if (voxels.view[i] === 1) {
-          voxels.view[i] = 2;
+          voxels.view[i] = 3;
         }
-        voxels.view[i + 4] = 32;
+        voxels.view[i + 5] = 32;
       }
     } else {
       this._propagate(
@@ -221,7 +221,7 @@ class VoxelWorld {
             for (let y = height - 1; y >= 0; y -= 1) {
               if (
                 y === 0
-                || inflated[(z * width * height + y * width + x) * 5] !== 0
+                || inflated[(z * width * height + y * width + x) * 6] !== 0
               ) {
                 heightmap.view[index] = y;
                 break;
