@@ -551,7 +551,7 @@ void update(
     if (sunlight != 0) {
       voxels[voxel + VOXEL_SUNLIGHT] = 0;
       queueA[0] = voxel;
-      queueA[1] = light;
+      queueA[1] = sunlight;
       removeLight(
         VOXEL_SUNLIGHT,
         world,

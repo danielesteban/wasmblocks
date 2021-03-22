@@ -145,13 +145,14 @@ const world = new VoxelWorld({
       ];
       scene.onAnimationTick = () => {
         const { brush, buttons, raycaster } = controls;
-        const isPlacing = buttons.secondaryDown;
+        const isPlacingBlock = buttons.secondaryDown;
+        const isPlacingLight = buttons.tertiaryDown;
         const isRemoving = buttons.primaryDown;
-        if (!(isPlacing || isRemoving)) {
+        if (!(isPlacingBlock || isPlacingLight || isRemoving)) {
           return;
         }
         const hit = raycaster.intersectObjects(
-          isPlacing ? [...voxels.children, grid] : voxels.children
+          isRemoving ? voxels.children : [...voxels.children, grid]
         )[0] || false;
         if (!hit) {
           return;
@@ -159,30 +160,34 @@ const world = new VoxelWorld({
         if (sounds) {
           const sound = sounds.find(({ isPlaying }) => (!isPlaying));
           if (sound && sound.context.state === 'running') {
-            sound.filter.type = isPlacing ? 'lowpass' : 'highpass';
+            sound.filter.type = isRemoving ? 'highpass' : 'lowpass';
             sound.filter.frequency.value = (Math.random() + 0.5) * 1000;
             sound.position.copy(hit.point);
             sound.play();
           }
         }
         const color = {
-          r: 0xBB,
-          g: 0xBB,
-          b: 0x55,
+          r: Math.floor(Math.random() * 256),
+          g: Math.floor(Math.random() * 256),
+          b: Math.floor(Math.random() * 256),
         };
         const noise = ((color.r + color.g + color.b) / 3) * brush.noise;
         hit.point
           .divideScalar(scale)
-          .addScaledVector(hit.face.normal, isPlacing ? 0.25 : -0.25)
+          .addScaledVector(hit.face.normal, isRemoving ? -0.25 : 0.25)
           .floor();
-        brush.shape = isPlacing ? 0 : 1;
-        brush.size = isPlacing ? 2 : 6;
+        brush.shape = isPlacingLight ? 0 : 1;
+        brush.size = isPlacingLight ? 2 : 6;
+        let type;
+        if (isPlacingBlock) type = 1;
+        else if (isPlacingLight) type = 2;
+        else type = 0;
         controls.getBrush(brush).forEach(({ x, y, z }) => (
           world.update({
             x: hit.point.x + x,
             y: hit.point.y + y,
             z: hit.point.z + z,
-            type: isPlacing ? 2 : 0,
+            type,
             r: Math.min(Math.max(color.r + (Math.random() - 0.5) * noise, 0), 0xFF),
             g: Math.min(Math.max(color.g + (Math.random() - 0.5) * noise, 0), 0xFF),
             b: Math.min(Math.max(color.b + (Math.random() - 0.5) * noise, 0), 0xFF),
