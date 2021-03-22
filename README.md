@@ -5,9 +5,13 @@
 
 > A tech demo of yet another voxelizer. This time with a backend implemented in C.
 
-#### Live deployment
+#### Live demo
 
 [https://wasmblocks.gatunes.com/](https://wasmblocks.gatunes.com/)
+
+#### Animation Test
+
+[https://wasmblocks.gatunes.com/#/animation](https://wasmblocks.gatunes.com/#/animation)
 
 #### Dev dependencies
 

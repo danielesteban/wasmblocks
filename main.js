@@ -7,6 +7,9 @@ import Grid from './renderables/grid.js';
 import VoxelChunk from './renderables/chunk.js';
 import { Color, Group, Scene } from './vendor/three.js';
 
+// Navigate to /#/animation to run the animation test
+const isAnimationTest = location.hash.substr(2) === 'animation';
+
 const renderer = new Renderer({
   fps: document.getElementById('fps'),
   renderer: document.getElementById('renderer'),
@@ -45,9 +48,15 @@ Promise.all([...Array(4)].map(() => (
 const world = new VoxelWorld({
   wasm: '/core/voxels.wasm',
   chunkSize: 32,
-  width: 384,
-  height: 128,
-  depth: 384,
+  ...(isAnimationTest ? {
+    width: 96,
+    height: 320,
+    depth: 96,
+  } : {
+    width: 384,
+    height: 128,
+    depth: 384,
+  }),
   onLoad: () => {
     const chunks = {
       x: world.width / world.chunkSize,
@@ -63,8 +72,17 @@ const world = new VoxelWorld({
     scene.add(voxels);
     scene.add(dome);
 
-    world.generate(Math.floor(Math.random() * 2147483647));
-    {
+    world.generate({
+      seed: Math.floor(Math.random() * 2147483647),
+      unlit: isAnimationTest,
+    });
+    if (isAnimationTest) {
+      camera.position.set(
+        world.width * 0.5 * scale,
+        world.height * 0.2 * scale,
+        world.depth * 2 * scale,
+      );
+    } else {
       const spawn = camera.position.set(
         Math.floor(world.width * 0.5),
         0,
@@ -121,80 +139,81 @@ const world = new VoxelWorld({
       });
     };
 
-    scene.onAnimationTick = () => {
-      const { brush, buttons, raycaster } = controls;
-      const isPlacing = buttons.secondaryDown;
-      const isRemoving = buttons.primaryDown;
-      if (!(isPlacing || isRemoving)) {
-        return;
-      }
-      const hit = raycaster.intersectObjects(
-        isPlacing ? [...voxels.children, grid] : voxels.children
-      )[0] || false;
-      if (!hit) {
-        return;
-      }
-      if (sounds) {
-        const sound = sounds.find(({ isPlaying }) => (!isPlaying));
-        if (sound && sound.context.state === 'running') {
-          sound.filter.type = isPlacing ? 'lowpass' : 'highpass';
-          sound.filter.frequency.value = (Math.random() + 0.5) * 1000;
-          sound.position.copy(hit.point);
-          sound.play();
+    if (isAnimationTest) {
+      let t = 0;
+      scene.onAnimationTick = ({ delta }) => {
+        t += delta;
+        if (t >= 5) {
+          world.generate({
+            seed: Math.floor(Math.random() * 2147483647),
+            unlit: true,
+          });
+          t = 0;
+        } else {
+          world.simulate(1);
         }
-      }
-      const color = {
-        r: Math.floor(Math.random() * 256),
-        g: Math.floor(Math.random() * 256),
-        b: Math.floor(Math.random() * 256),
+        for (let z = 0, i = 0; z < chunks.z; z += 1) {
+          for (let y = 0; y < chunks.y; y += 1) {
+            for (let x = 0; x < chunks.x; x += 1, i += 1) {
+              const mesh = meshes[i];
+              const geometry = world.mesh(x, y, z);
+              if (geometry.indices.length) {
+                mesh.update(geometry);
+                if (!mesh.parent) voxels.add(mesh);
+              } else {
+                if (mesh.parent) voxels.remove(mesh);
+              }
+            }
+          }
+        }
       };
-      const noise = ((color.r + color.g + color.b) / 3) * brush.noise;
-      hit.point
-        .divideScalar(scale)
-        .addScaledVector(hit.face.normal, isPlacing ? 0.25 : -0.25)
-        .floor();
-      controls.getBrush(brush).forEach(({ x, y, z }) => (
-        world.update({
-          x: hit.point.x + x,
-          y: hit.point.y + y,
-          z: hit.point.z + z,
-          type: isPlacing ? 1 : 0,
-          r: Math.min(Math.max(color.r + (Math.random() - 0.5) * noise, 0), 0xFF),
-          g: Math.min(Math.max(color.g + (Math.random() - 0.5) * noise, 0), 0xFF),
-          b: Math.min(Math.max(color.b + (Math.random() - 0.5) * noise, 0), 0xFF),
-        })
-      ));
-      remesh(hit.point);
-    };
-
-    // Animation test
-    // You'll need to reduce the world size first
-    // if you want to try this with more than 1fps
-    //
-    // let t = 0;
-    // scene.onAnimationTick = ({ delta }) => {
-    //   t += delta;
-    //   if (t >= 1) {
-    //     world.generate(Math.floor(Math.random() * 2147483647));
-    //     t = 0;
-    //   } else {
-    //     world.simulate(Math.max(Math.floor(delta * 100), 1));
-    //   }
-    //   for (let z = 0, i = 0; z < chunks.z; z += 1) {
-    //     for (let y = 0; y < chunks.y; y += 1) {
-    //       for (let x = 0; x < chunks.x; x += 1, i += 1) {
-    //         const mesh = meshes[i];
-    //         const geometry = world.mesh(x, y, z);
-    //         if (geometry.indices.length) {
-    //           mesh.update(geometry);
-    //           if (!mesh.parent) voxels.add(mesh);
-    //         } else {
-    //           if (mesh.parent) voxels.remove(mesh);
-    //         }
-    //       }
-    //     }
-    //   }
-    // };
+    } else {
+      scene.onAnimationTick = () => {
+        const { brush, buttons, raycaster } = controls;
+        const isPlacing = buttons.secondaryDown;
+        const isRemoving = buttons.primaryDown;
+        if (!(isPlacing || isRemoving)) {
+          return;
+        }
+        const hit = raycaster.intersectObjects(
+          isPlacing ? [...voxels.children, grid] : voxels.children
+        )[0] || false;
+        if (!hit) {
+          return;
+        }
+        if (sounds) {
+          const sound = sounds.find(({ isPlaying }) => (!isPlaying));
+          if (sound && sound.context.state === 'running') {
+            sound.filter.type = isPlacing ? 'lowpass' : 'highpass';
+            sound.filter.frequency.value = (Math.random() + 0.5) * 1000;
+            sound.position.copy(hit.point);
+            sound.play();
+          }
+        }
+        const color = {
+          r: Math.floor(Math.random() * 256),
+          g: Math.floor(Math.random() * 256),
+          b: Math.floor(Math.random() * 256),
+        };
+        const noise = ((color.r + color.g + color.b) / 3) * brush.noise;
+        hit.point
+          .divideScalar(scale)
+          .addScaledVector(hit.face.normal, isPlacing ? 0.25 : -0.25)
+          .floor();
+        controls.getBrush(brush).forEach(({ x, y, z }) => (
+          world.update({
+            x: hit.point.x + x,
+            y: hit.point.y + y,
+            z: hit.point.z + z,
+            type: isPlacing ? 1 : 0,
+            r: Math.min(Math.max(color.r + (Math.random() - 0.5) * noise, 0), 0xFF),
+            g: Math.min(Math.max(color.g + (Math.random() - 0.5) * noise, 0), 0xFF),
+            b: Math.min(Math.max(color.b + (Math.random() - 0.5) * noise, 0), 0xFF),
+          })
+        ));
+        remesh(hit.point);
+      };
+    }
 
     renderer.scene = scene;
     document.body.removeChild(document.getElementById('loading'));

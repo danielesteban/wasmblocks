@@ -11,6 +11,7 @@ class VoxelWorld {
     this.width = width;
     this.height = height;
     this.depth = depth;
+    this.simulationStep = 0;
     const maxFaces = Math.ceil(chunkSize * chunkSize * chunkSize * 0.5) * 6; // worst possible case
     const queueSize = width * depth * 2;
     const layout = [
@@ -91,11 +92,16 @@ class VoxelWorld {
     };
   }
 
-  generate(seed) {
+  generate({
+    seed,
+    unlit
+  }) {
     const {
       world,
       heightmap,
       voxels,
+      queueA,
+      queueB,
     } = this;
     heightmap.view.fill(0);
     voxels.view.fill(0);
@@ -105,24 +111,19 @@ class VoxelWorld {
       voxels.address,
       seed
     );
-    this.propagate();
-  }
-
-  propagate() {
-    const {
-      world,
-      heightmap,
-      voxels,
-      queueA,
-      queueB,
-    } = this;
-    this._propagate(
-      world.address,
-      heightmap.address,
-      voxels.address,
-      queueA.address,
-      queueB.address
-    );
+    if (unlit) {
+      for (let i = 4, l = voxels.view.length; i < l; i += 5) {
+        voxels.view[i] = 32;
+      }
+    } else {
+      this._propagate(
+        world.address,
+        heightmap.address,
+        voxels.address,
+        queueA.address,
+        queueB.address
+      );
+    }
   }
 
   simulate(steps) {
@@ -135,10 +136,11 @@ class VoxelWorld {
       this._simulate(
         world.address,
         heightmap.address,
-        voxels.address
+        voxels.address,
+        this.simulationStep
       );
+      this.simulationStep += 1;
     }
-    this.propagate();
   }
 
   update({
