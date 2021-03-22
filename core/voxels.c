@@ -109,6 +109,132 @@ static const unsigned int getColorFromNoise(unsigned char noise) {
   );
 }
 
+static void floodLight(
+  const World* world,
+  const int* heightmap,
+  unsigned char* voxels,
+  int* queue,
+  const unsigned int size,
+  int* next
+) {
+  unsigned int nextLength = 0;
+  for (unsigned int i = 0; i < size; i++) {
+    const int voxel = queue[i];
+    const unsigned char light = voxels[voxel + VOXEL_LIGHT];
+    if (light == 0) {
+      continue;
+    }
+    const int index = voxel / VOXELS_STRIDE,
+              z = _fnlFastFloor(index / (world->width * world->height)),
+              y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
+              x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
+    for (unsigned char n = 0; n < 6; n += 1) {
+      const int nx = x + neighbors[n * 3],
+                ny = y + neighbors[n * 3 + 1],
+                nz = z + neighbors[n * 3 + 2],
+                neighbor = getVoxel(world, nx, ny, nz);
+      const unsigned char nl = n == 5 && light == maxLight ? light : light - 1;
+      if (
+        neighbor == -1
+        || voxels[neighbor] != 0
+        || (
+          n != 5
+          && light == maxLight
+          && ny > heightmap[(nz * world->width) + nx]
+        )
+        || voxels[neighbor + VOXEL_LIGHT] >= nl
+      ) {
+        continue;
+      }
+      voxels[neighbor + VOXEL_LIGHT] = nl;
+      next[nextLength++] = neighbor;
+    }
+  }
+  if (nextLength > 0) {
+    floodLight(
+      world,
+      heightmap,
+      voxels,
+      next,
+      nextLength,
+      queue
+    );
+  }
+}
+
+static void removeLight(
+  const World* world,
+  const int* heightmap,
+  unsigned char* voxels,
+  int* queue,
+  const unsigned int size,
+  int* next,
+  int* floodQueue,
+  unsigned int floodQueueSize,
+  int* floodNext
+) {
+  unsigned int nextLength = 0;
+  for (int i = 0; i < size; i += 2) {
+    const int voxel = queue[i];
+    const unsigned char light = queue[i + 1];
+    const int index = voxel / VOXELS_STRIDE,
+              z = _fnlFastFloor(index / (world->width * world->height)),
+              y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
+              x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
+    for (unsigned char n = 0; n < 6; n += 1) {
+      const int neighbor = getVoxel(
+        world,
+        x + neighbors[n * 3],
+        y + neighbors[n * 3 + 1],
+        z + neighbors[n * 3 + 2]
+      );
+      if (neighbor == -1 || voxels[neighbor] != 0) {
+        continue;
+      }
+      const unsigned char nl = voxels[neighbor + VOXEL_LIGHT];
+      if (nl == 0) {
+        continue;
+      }
+      if (
+        nl < light
+        || (
+          n == 5
+          && light == maxLight
+          && nl == maxLight
+        )
+      ) {
+        next[nextLength++] = neighbor;
+        next[nextLength++] = nl;
+        voxels[neighbor + VOXEL_LIGHT] = 0;
+      } else if (nl >= light) {
+        floodQueue[floodQueueSize++] = neighbor;
+      }
+    }
+  }
+  if (nextLength > 0) {
+    removeLight(
+      world,
+      heightmap,
+      voxels,
+      next,
+      nextLength,
+      queue,
+      floodQueue,
+      floodQueueSize,
+      floodNext
+    );
+  } else if (floodQueueSize > 0) {
+    floodLight(
+      world,
+      heightmap,
+      voxels,
+      floodQueue,
+      floodQueueSize,
+      floodNext
+    );
+  }
+}
+
 static void growBox(
   unsigned char* box,
   const unsigned char x,
@@ -189,132 +315,6 @@ static void pushFace(
   growBox(box, x4, y4, z4);
 }
 
-void floodLight(
-  const World* world,
-  int* heightmap,
-  unsigned char* voxels,
-  int* queue,
-  const int size,
-  int* next
-) {
-  unsigned int nextLength = 0;
-  for (unsigned int i = 0; i < size; i++) {
-    const int voxel = queue[i];
-    const unsigned char light = voxels[voxel + VOXEL_LIGHT];
-    if (light == 0) {
-      continue;
-    }
-    const int index = voxel / VOXELS_STRIDE,
-              z = _fnlFastFloor(index / (world->width * world->height)),
-              y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
-              x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
-    for (unsigned char n = 0; n < 6; n += 1) {
-      const int nx = x + neighbors[n * 3],
-                ny = y + neighbors[n * 3 + 1],
-                nz = z + neighbors[n * 3 + 2],
-                neighbor = getVoxel(world, nx, ny, nz);
-      const unsigned char nl = n == 5 && light == maxLight ? light : light - 1;
-      if (
-        neighbor == -1
-        || voxels[neighbor] != 0
-        || (
-          n != 5
-          && light == maxLight
-          && ny > heightmap[(nz * world->width) + nx]
-        )
-        || voxels[neighbor + VOXEL_LIGHT] >= nl
-      ) {
-        continue;
-      }
-      voxels[neighbor + VOXEL_LIGHT] = nl;
-      next[nextLength++] = neighbor;
-    }
-  }
-  if (nextLength > 0) {
-    floodLight(
-      world,
-      heightmap,
-      voxels,
-      next,
-      nextLength,
-      queue
-    );
-  }
-}
-
-void removeLight(
-  const World* world,
-  int* heightmap,
-  unsigned char* voxels,
-  int* queue,
-  const int size,
-  int* next,
-  int* floodQueue,
-  int floodQueueSize,
-  int* floodNext
-) {
-  int nextLength = 0;
-  for (int i = 0; i < size; i += 2) {
-    const int voxel = queue[i];
-    const unsigned char light = queue[i + 1];
-    const int index = voxel / VOXELS_STRIDE,
-              z = _fnlFastFloor(index / (world->width * world->height)),
-              y = _fnlFastFloor((index % (world->width * world->height)) / world->width),
-              x = _fnlFastFloor((index % (world->width * world->height)) % world->width);
-    for (unsigned char n = 0; n < 6; n += 1) {
-      const int neighbor = getVoxel(
-        world,
-        x + neighbors[n * 3],
-        y + neighbors[n * 3 + 1],
-        z + neighbors[n * 3 + 2]
-      );
-      if (neighbor == -1 || voxels[neighbor] != 0) {
-        continue;
-      }
-      const unsigned char nl = voxels[neighbor + VOXEL_LIGHT];
-      if (nl == 0) {
-        continue;
-      }
-      if (
-        nl < light
-        || (
-          n == 5
-          && light == maxLight
-          && nl == maxLight
-        )
-      ) {
-        next[nextLength++] = neighbor;
-        next[nextLength++] = nl;
-        voxels[neighbor + VOXEL_LIGHT] = 0;
-      } else if (nl >= light) {
-        floodQueue[floodQueueSize++] = neighbor;
-      }
-    }
-  }
-  if (nextLength > 0) {
-    removeLight(
-      world,
-      heightmap,
-      voxels,
-      next,
-      nextLength,
-      queue,
-      floodQueue,
-      floodQueueSize,
-      floodNext
-    );
-  } else if (floodQueueSize > 0) {
-    floodLight(
-      world,
-      heightmap,
-      voxels,
-      floodQueue,
-      floodQueueSize,
-      floodNext
-    );
-  }
-}
-
 void generate(
   const World* world,
   int* heightmap,
@@ -348,12 +348,12 @@ void generate(
 
 void propagate(
   const World* world,
-  int* heightmap,
+  const int* heightmap,
   unsigned char* voxels,
   int* queueA,
   int* queueB
 ) {
-  int queueSize = 0;
+  unsigned int queueSize = 0;
   for (int z = 0, voxel = 0; z < world->depth; z++) {
     for (int y = 0; y < world->height; y++) {
       for (int x = 0; x < world->width; x++, voxel += VOXELS_STRIDE) {
@@ -374,6 +374,140 @@ void propagate(
     queueSize,
     queueB
   );
+}
+
+
+void simulate(
+  const World* world,
+  const int* heightmap,
+  unsigned char* voxels
+) {
+  // This is mainly just for testing
+  // Doing animations like this requires full repropagation
+  // So... it's not truly feasible unless the volume is really small
+  for (int y = 1; y < world->height; y++) {
+    for (int z = 2; z < world->depth - 2; z++) {
+      for (int x = 2; x < world->width - 2; x++) {
+        const int voxel = getVoxel(world, x, y, z);
+        if (voxels[voxel] == 0) {
+          continue;
+        }
+        // Drop everything to the ground
+        int neighbor = getVoxel(world, x, y - 1, z);
+        if (neighbor == -1 || voxels[neighbor] != 0) {
+          neighbor = getVoxel(world, x - 1, y - 1, z);
+          if (neighbor == -1 || voxels[neighbor] != 0) {
+            neighbor = getVoxel(world, x, y - 1, z + 1);
+            if (neighbor == -1 || voxels[neighbor] != 0) {
+              neighbor = getVoxel(world, x, y - 1, z - 1);
+              if (neighbor == -1 || voxels[neighbor] != 0) {
+                neighbor = getVoxel(world, x + 1, y - 1, z);
+                if (neighbor == -1 || voxels[neighbor] != 0) {
+                  continue;
+                }
+              }
+            }
+          }
+        }
+        voxels[neighbor] = voxels[voxel];
+        voxels[neighbor + VOXEL_R] = voxels[voxel + VOXEL_R];
+        voxels[neighbor + VOXEL_G] = voxels[voxel + VOXEL_G];
+        voxels[neighbor + VOXEL_B] = voxels[voxel + VOXEL_B];
+        voxels[voxel] = 0;
+        voxels[voxel + VOXEL_R] = 0;
+        voxels[voxel + VOXEL_G] = 0;
+        voxels[voxel + VOXEL_B] = 0;
+      }
+    }
+  }
+}
+
+void update(
+  const World* world,
+  int* heightmap,
+  unsigned char* voxels,
+  int* queueA,
+  int* queueB,
+  int* queueC,
+  int* queueD,
+  const unsigned char type,
+  const int x,
+  const int y,
+  const int z,
+  const unsigned char r,
+  const unsigned char g,
+  const unsigned char b
+) {
+  if (
+    x < 1 || x >= world->width - 1
+    || y < 0 || y >= world->height - 1
+    || z < 1 || z >= world->depth - 1
+  ) {
+    return;
+  }
+  const int voxel = getVoxel(world, x, y, z);
+  const int voxelHeight = (z * world->width) + x;
+  const int height = heightmap[voxelHeight];
+  const unsigned char current = voxels[voxel];
+  if (type == 0) {
+    if (y == height) {
+      for (int h = y - 1; h >= 0; h --) {
+        if (h == 0 || voxels[getVoxel(world, x, h, z)] != 0) {
+          heightmap[voxelHeight] = h;
+          break;
+        }
+      }
+    }
+  } else if (height < y) {
+    heightmap[voxelHeight] = y;
+  }
+  voxels[voxel] = type;
+  voxels[voxel + VOXEL_R] = r;
+  voxels[voxel + VOXEL_G] = g;
+  voxels[voxel + VOXEL_B] = b;
+  if (current == 0 && type != 0) {
+    const unsigned char light = voxels[voxel + VOXEL_LIGHT];
+    if (light != 0) {
+      voxels[voxel + VOXEL_LIGHT] = 0;
+      queueA[0] = voxel;
+      queueA[1] = light;
+      removeLight(
+        world,
+        heightmap,
+        voxels,
+        queueA,
+        2,
+        queueB,
+        queueC,
+        0,
+        queueD
+      );
+    }
+  }
+  if (type == 0 && current != 0) {
+    unsigned int queueSize = 0;
+    for (unsigned char n = 0; n < 6; n += 1) {
+      const int neighbor = getVoxel(
+        world,
+        x + neighbors[n * 3],
+        y + neighbors[n * 3 + 1],
+        z + neighbors[n * 3 + 2]
+      );
+      if (neighbor != -1 && voxels[neighbor + VOXEL_LIGHT] != 0) {
+        queueA[queueSize++] = neighbor;
+      }
+    }
+    if (queueSize > 0) {
+      floodLight(
+        world,
+        heightmap,
+        voxels,
+        queueA,
+        queueSize,
+        queueB
+      );
+    }
+  }
 }
 
 const int mesh(
@@ -566,49 +700,4 @@ const int mesh(
     + halfDepth * halfDepth
   );
   return faces;
-}
-
-void simulate(
-  const World* world,
-  int* heightmap,
-  unsigned char* voxels
-) {
-  // This is mainly just for testing
-  // Doing animations like this requires full repropagation
-  // So... it's not truly feasible unless the volume is really small
-  for (int y = 1; y < world->height; y++) {
-    for (int z = 2; z < world->depth - 2; z++) {
-      for (int x = 2; x < world->width - 2; x++) {
-        const int voxel = getVoxel(world, x, y, z);
-        if (voxels[voxel] == 0) {
-          continue;
-        }
-        // Drop everything to the ground
-        int neighbor = getVoxel(world, x, y - 1, z);
-        if (neighbor == -1 || voxels[neighbor] != 0) {
-          neighbor = getVoxel(world, x - 1, y - 1, z);
-          if (neighbor == -1 || voxels[neighbor] != 0) {
-            neighbor = getVoxel(world, x, y - 1, z + 1);
-            if (neighbor == -1 || voxels[neighbor] != 0) {
-              neighbor = getVoxel(world, x, y - 1, z - 1);
-              if (neighbor == -1 || voxels[neighbor] != 0) {
-                neighbor = getVoxel(world, x + 1, y - 1, z);
-                if (neighbor == -1 || voxels[neighbor] != 0) {
-                  continue;
-                }
-              }
-            }
-          }
-        }
-        voxels[neighbor] = voxels[voxel];
-        voxels[neighbor + VOXEL_R] = voxels[voxel + VOXEL_R];
-        voxels[neighbor + VOXEL_G] = voxels[voxel + VOXEL_G];
-        voxels[neighbor + VOXEL_B] = voxels[voxel + VOXEL_B];
-        voxels[voxel] = 0;
-        voxels[voxel + VOXEL_R] = 0;
-        voxels[voxel + VOXEL_G] = 0;
-        voxels[voxel + VOXEL_B] = 0;
-      }
-    }
-  }
 }
