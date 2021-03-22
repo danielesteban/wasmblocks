@@ -17,17 +17,6 @@ const renderer = new Renderer({
 
 const { camera, controls } = renderer;
 const meshes = [];
-const neighbors = [
-  { x: -1, z: -1 },
-  { x: 0, z: -1 },
-  { x: 1, z: -1 },
-  { x: -1, z: 0 },
-  { x: 0, z: 0 },
-  { x: 1, z: 0 },
-  { x: -1, z: 1 },
-  { x: 0, z: 1 },
-  { x: 1, z: 1 },
-];
 const scale = 0.5;
 const scene = new Scene();
 scene.background = new Color(0x0a141e);
@@ -116,6 +105,7 @@ const world = new VoxelWorld({
     }
 
     if (isAnimationTest) {
+      // Animation Test
       let t = 0;
       scene.onAnimationTick = ({ delta }) => {
         t += delta;
@@ -144,6 +134,18 @@ const world = new VoxelWorld({
         }
       };
     } else {
+      // Block editing
+      const neighbors = [
+        { x: -1, z: -1 },
+        { x: 0, z: -1 },
+        { x: 1, z: -1 },
+        { x: -1, z: 0 },
+        { x: 0, z: 0 },
+        { x: 1, z: 0 },
+        { x: -1, z: 1 },
+        { x: 0, z: 1 },
+        { x: 1, z: 1 },
+      ];
       scene.onAnimationTick = () => {
         const { brush, buttons, raycaster } = controls;
         const isPlacing = buttons.secondaryDown;
@@ -213,5 +215,65 @@ const world = new VoxelWorld({
 
     renderer.scene = scene;
     document.body.removeChild(document.getElementById('loading'));
+
+    // Import by drag&drop or clicking the link on the info overlay
+    {
+      const importFile = (file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          world.importVoxels(new Uint8Array(reader.result))
+            .then(() => {
+              for (let z = 0, i = 0; z < chunks.z; z += 1) {
+                for (let y = 0; y < chunks.y; y += 1) {
+                  for (let x = 0; x < chunks.x; x += 1, i += 1) {
+                    const mesh = meshes[i];
+                    const geometry = world.mesh(x, y, z);
+                    if (geometry.indices.length > 0) {
+                      mesh.update(geometry);
+                      if (!mesh.parent) voxels.add(mesh);
+                    } else if (mesh.parent) {
+                      voxels.remove(mesh);
+                    }
+                  }
+                }
+              }
+            });
+        };
+        reader.readAsArrayBuffer(file);
+      };
+      document.addEventListener('dragover', (e) => e.preventDefault(), false);
+      document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const [file] = e.dataTransfer.files;
+        if (file && file.name.lastIndexOf('.blocks') === file.name.length - 7) {
+          importFile(file);
+        }
+      }, false);
+      const loader = document.createElement('input');
+      loader.type = 'file';
+      loader.accept = '.blocks';
+      loader.style.display = 'none';
+      document.body.appendChild(loader);
+      document.getElementById('importVoxels').addEventListener('click', () => {
+        loader.onchange = ({ target: { files: [file] } }) => importFile(file);
+        loader.click(); 
+      }, false);
+    }
+
+    // Export by clicking the link on the info overlay
+    {
+      const downloader = document.createElement('a');
+      downloader.style.display = 'none';
+      document.body.appendChild(downloader);
+      document.getElementById('exportVoxels').addEventListener('click', () => (
+        world.exportVoxels()
+          .then((buffer) => {
+            const blob = new Blob([buffer], { type: 'application/octet-stream' });
+            downloader.download = `${Date.now()}.blocks`;
+            downloader.href = URL.createObjectURL(blob);
+            downloader.click();
+          })
+      ), false);
+    }
   },
 });

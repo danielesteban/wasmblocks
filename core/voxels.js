@@ -11,6 +11,15 @@ class VoxelWorld {
     this.width = width;
     this.height = height;
     this.depth = depth;
+    this.pako = new Worker('/core/pako.worker.js');
+    this.pako.requestId = 0;
+    this.pako.requests = [];
+    this.pako.addEventListener('message', ({ data: { id, buffer } }) => {
+      const req = this.pako.requests.findIndex((p) => p.id === id);
+      if (req !== -1) {
+        this.pako.requests.splice(req, 1)[0].resolve(buffer);
+      }
+    });
     this.simulationStep = 0;
     const maxFaces = Math.ceil(chunkSize * chunkSize * chunkSize * 0.5) * 6; // worst possible case
     const queueSize = width * depth * 2;
@@ -174,6 +183,54 @@ class VoxelWorld {
       x, y, z,
       r, g, b
     );
+  }
+
+  exportVoxels() {
+    const {
+      voxels,
+      pako,
+    } = this;
+    return new Promise((resolve) => {
+      const id = pako.requestId++;
+      pako.requests.push({ id, resolve });
+      const inflated = new Uint8Array(voxels.view);
+      pako.postMessage({ id, buffer: inflated, operation: 'deflate' }, [inflated.buffer]);
+    });
+  }
+
+  importVoxels(deflated) {
+    const {
+      width,
+      height,
+      depth,
+      heightmap,
+      voxels,
+      pako,
+    } = this;
+    return (
+      new Promise((resolve) => {
+        const id = pako.requestId++;
+        pako.requests.push({ id, resolve });
+        pako.postMessage({ id, buffer: deflated, operation: 'inflate' }, [deflated.buffer]);
+      })
+    )
+      .then((inflated) => {
+        // This should prolly be a method in the C implementation
+        for (let z = 0, index = 0; z < depth; z += 1) {
+          for (let x = 0; x < width; x += 1, index += 1) {
+            for (let y = height - 1; y >= 0; y -= 1) {
+              if (
+                y === 0
+                || inflated[(z * width * height + y * width + x) * 5] !== 0
+              ) {
+                heightmap.view[index] = y;
+                break;
+              }
+            }
+          }
+        }
+        voxels.view.set(inflated);
+      });
   }
 }
 
