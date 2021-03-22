@@ -170,8 +170,7 @@ static void removeLight(
   const unsigned int size,
   int* next,
   int* floodQueue,
-  unsigned int floodQueueSize,
-  int* floodNext
+  unsigned int floodQueueSize
 ) {
   unsigned int nextLength = 0;
   for (int i = 0; i < size; i += 2) {
@@ -220,8 +219,7 @@ static void removeLight(
       nextLength,
       queue,
       floodQueue,
-      floodQueueSize,
-      floodNext
+      floodQueueSize
     );
   } else if (floodQueueSize > 0) {
     floodLight(
@@ -230,7 +228,7 @@ static void removeLight(
       voxels,
       floodQueue,
       floodQueueSize,
-      floodNext
+      queue
     );
   }
 }
@@ -319,7 +317,8 @@ void generate(
   const World* world,
   int* heightmap,
   unsigned char* voxels,
-  const int seed
+  const int seed,
+  const unsigned char type
 ) {
   fnl_state noise = fnlCreateState();
   noise.seed = seed;
@@ -334,8 +333,25 @@ void generate(
           continue;
         }
         const float n = _fnlFastAbs(fnlGetNoise3D(&noise, x, y, z));
-        const int h = n * world->height;
-        if (y <= h) {
+        unsigned char isBlock = 0;
+        switch (type) {
+          case 0: // Default
+            isBlock = (y <= (n * world->height)) ? 1 : 0;
+            break;
+          case 1: { // Sphere
+            const int cx = world->width * 0.5 - x;
+            const int cy = world->height * 0.5 - y;
+            const int cz = world->depth * 0.5 - z;
+            isBlock = (
+              y < world->height - 32
+              && n > 0.1f
+              && (y < 8 || sqrt(cx * cx + cz * cz) >= world->width * 0.05f)
+              && sqrt(cx * cx + cy * cy + cz * cz) <= world->width * 0.425f
+            ) ? 1 : 0;
+          }
+            break;
+        }
+        if (isBlock == 1) {
           const unsigned int color = getColorFromNoise(0xFF * n);
           const int heightmapIndex = z * world->width + x;
           voxels[voxel] = 0x01;
@@ -432,7 +448,6 @@ void update(
   int* queueA,
   int* queueB,
   int* queueC,
-  int* queueD,
   const unsigned char type,
   const int x,
   const int y,
@@ -482,8 +497,7 @@ void update(
         2,
         queueB,
         queueC,
-        0,
-        queueD
+        0
       );
     }
   }

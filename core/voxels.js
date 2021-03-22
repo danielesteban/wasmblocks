@@ -22,7 +22,6 @@ class VoxelWorld {
       { id: 'queueA', type: Int32Array, size: queueSize },
       { id: 'queueB', type: Int32Array, size: queueSize },
       { id: 'queueC', type: Int32Array, size: queueSize },
-      { id: 'queueD', type: Int32Array, size: queueSize },
       { id: 'world', type: Int32Array, size: 3 },
       { id: 'bounds', type: Float32Array, size: 4 },
     ];
@@ -93,8 +92,9 @@ class VoxelWorld {
   }
 
   generate({
-    seed,
-    unlit
+    seed = Math.floor(Math.random() * 2147483647),
+    type = 0,
+    unlit = false,
   }) {
     const {
       world,
@@ -109,7 +109,8 @@ class VoxelWorld {
       world.address,
       heightmap.address,
       voxels.address,
-      seed
+      seed,
+      type
     );
     if (unlit) {
       // ToDo/Incomplete
@@ -160,7 +161,6 @@ class VoxelWorld {
       queueA,
       queueB,
       queueC,
-      queueD,
     } = this;
     this._update(
       world.address,
@@ -169,7 +169,6 @@ class VoxelWorld {
       queueA.address,
       queueB.address,
       queueC.address,
-      queueD.address,
       type,
       x, y, z,
       r, g, b
