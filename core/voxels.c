@@ -44,7 +44,7 @@ static const int getVoxel(
 }
 
 static const float getLight(
-  unsigned char* voxels,
+  const unsigned char* voxels,
   const unsigned char light,
   const int n1,
   const int n2,
@@ -512,14 +512,14 @@ void update(
 
 const int mesh(
   const World* world,
-  const int chunkX,
-  const int chunkY,
-  const int chunkZ,
-  const unsigned char chunkSize,
-  unsigned char* voxels,
+  const unsigned char* voxels,
   float* bounds,
   unsigned int* indices,
-  unsigned char* vertices
+  unsigned char* vertices,
+  const unsigned char chunkSize,
+  const int chunkX,
+  const int chunkY,
+  const int chunkZ
 ) {
   if (
     chunkX < 0

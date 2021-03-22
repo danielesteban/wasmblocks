@@ -70,14 +70,14 @@ class VoxelWorld {
     } = this;
     const faces = this._mesh(
       world.address,
-      x * chunkSize,
-      y * chunkSize,
-      z * chunkSize,
-      chunkSize,
       voxels.address,
       bounds.address,
       indices.address,
-      vertices.address
+      vertices.address,
+      chunkSize,
+      x * chunkSize,
+      y * chunkSize,
+      z * chunkSize
     );
     if (faces === -1) {
       throw new Error('Requested chunk is out of bounds');
