@@ -42,6 +42,8 @@ body.pointerlock #cursor {
 
 #info > a {
   color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 #loading {
