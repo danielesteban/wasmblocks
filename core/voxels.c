@@ -324,15 +324,20 @@ void generate(
   fnl_state noise = fnlCreateState();
   noise.seed = seed;
   noise.fractal_type = FNL_FRACTAL_FBM;
-  for (int z = 32; z < world->depth - 32; z++) {
+  for (int z = 0, voxel = 0; z < world->depth; z++) {
     for (int y = 0; y < world->height; y++) {
-      for (int x = 32; x < world->width - 32; x++) {
+      for (int x = 0; x < world->width; x++, voxel += VOXELS_STRIDE) {
+        if (
+          x < 32 || x >= world->width - 32
+          || z < 32 || z >= world->depth - 32
+        ) {
+          continue;
+        }
         const float n = _fnlFastAbs(fnlGetNoise3D(&noise, x, y, z));
         const int h = n * world->height;
         if (y <= h) {
           const unsigned int color = getColorFromNoise(0xFF * n);
-          const int voxel = getVoxel(world, x, y, z),
-                    heightmapIndex = z * world->width + x;
+          const int heightmapIndex = z * world->width + x;
           voxels[voxel] = 0x01;
           voxels[voxel + VOXEL_R] = (color >> 16) & 0xFF;
           voxels[voxel + VOXEL_G] = (color >> 8) & 0xFF;
@@ -355,14 +360,11 @@ void propagate(
 ) {
   unsigned int queueSize = 0;
   for (int z = 0, voxel = 0; z < world->depth; z++) {
-    for (int y = 0; y < world->height; y++) {
-      for (int x = 0; x < world->width; x++, voxel += VOXELS_STRIDE) {
-        if (y == (world->height - 1) && voxels[voxel] == 0) {
-          voxels[voxel + VOXEL_LIGHT] = maxLight;
-          queueA[queueSize++] = voxel;
-        } else {
-          voxels[voxel + VOXEL_LIGHT] = 0;
-        }
+    for (int x = 0; x < world->width; x++, voxel += VOXELS_STRIDE) {
+      const int voxel = getVoxel(world, x, world->height - 1, z);
+      if (voxels[voxel] == 0) {
+        voxels[voxel + VOXEL_LIGHT] = maxLight;
+        queueA[queueSize++] = voxel;
       }
     }
   }
@@ -376,38 +378,36 @@ void propagate(
   );
 }
 
-
 void simulate(
   const World* world,
   const int* heightmap,
-  unsigned char* voxels
+  unsigned char* voxels,
+  const unsigned int step
 ) {
-  // This is mainly just for testing
-  // Doing animations like this requires full repropagation
-  // So... it's not truly feasible unless the volume is really small
+  const unsigned char inv = step % 2 == 0 ? 1 : 0;
   for (int y = 1; y < world->height; y++) {
-    for (int z = 2; z < world->depth - 2; z++) {
-      for (int x = 2; x < world->width - 2; x++) {
+    for (int sz = 2; sz < world->depth - 2; sz++) {
+      const int z = inv == 1 ?  world->depth - 1 - sz : sz;
+      for (int sx = 2; sx < world->width - 2; sx++) {
+        const int x = inv == 1 ?  world->width - 1 - sx : sx;
         const int voxel = getVoxel(world, x, y, z);
         if (voxels[voxel] == 0) {
           continue;
         }
         // Drop everything to the ground
+        const unsigned char s = step % 4;
         int neighbor = getVoxel(world, x, y - 1, z);
         if (neighbor == -1 || voxels[neighbor] != 0) {
-          neighbor = getVoxel(world, x - 1, y - 1, z);
-          if (neighbor == -1 || voxels[neighbor] != 0) {
-            neighbor = getVoxel(world, x, y - 1, z + 1);
-            if (neighbor == -1 || voxels[neighbor] != 0) {
-              neighbor = getVoxel(world, x, y - 1, z - 1);
-              if (neighbor == -1 || voxels[neighbor] != 0) {
-                neighbor = getVoxel(world, x + 1, y - 1, z);
-                if (neighbor == -1 || voxels[neighbor] != 0) {
-                  continue;
-                }
-              }
+          for (unsigned char n = 0; n < 4; n += 1) {
+            const unsigned char ni = ((s + n) % 4) * 3;
+            neighbor = getVoxel(world, x + neighbors[ni], y - 1, z + neighbors[ni + 2]);
+            if (neighbor != -1 && voxels[neighbor] == 0) {
+              break;
             }
           }
+        }
+        if (neighbor == -1 || voxels[neighbor] != 0) {
+          continue;
         }
         voxels[neighbor] = voxels[voxel];
         voxels[neighbor + VOXEL_R] = voxels[voxel + VOXEL_R];
@@ -446,20 +446,20 @@ void update(
     return;
   }
   const int voxel = getVoxel(world, x, y, z);
-  const int voxelHeight = (z * world->width) + x;
-  const int height = heightmap[voxelHeight];
+  const int heightmapIndex = z * world->width + x;
+  const int height = heightmap[heightmapIndex];
   const unsigned char current = voxels[voxel];
   if (type == 0) {
     if (y == height) {
       for (int h = y - 1; h >= 0; h --) {
         if (h == 0 || voxels[getVoxel(world, x, h, z)] != 0) {
-          heightmap[voxelHeight] = h;
+          heightmap[heightmapIndex] = h;
           break;
         }
       }
     }
   } else if (height < y) {
-    heightmap[voxelHeight] = y;
+    heightmap[heightmapIndex] = y;
   }
   voxels[voxel] = type;
   voxels[voxel + VOXEL_R] = r;
