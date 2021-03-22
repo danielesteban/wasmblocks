@@ -27,7 +27,7 @@ On the first build, it will complain about a missing file that you can get here:
 git clone --recursive https://github.com/danielesteban/wasmblocks.git
 cd wasmblocks
 # build wasi-lib
-cd vendor/wasi-libc/ && make -j8 && cd ../..
+cd vendor/wasi-libc && make -j8 && cd ../..
 # install dev dependencies
 npm install
 # start the dev environment:
