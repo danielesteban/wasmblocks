@@ -384,7 +384,11 @@ void simulate(
   unsigned char* voxels,
   const unsigned int step
 ) {
+  // Be aware that running this will make the heightmap data invalid.
+  // This method could prolly update it but since it's not needed for
+  // the animation test I decided not update it here.
   const unsigned char inv = step % 2 == 0 ? 1 : 0;
+  const unsigned char noffset = step % 4;
   for (int y = 1; y < world->height; y++) {
     for (int sz = 2; sz < world->depth - 2; sz++) {
       const int z = inv == 1 ?  world->depth - 1 - sz : sz;
@@ -395,11 +399,10 @@ void simulate(
           continue;
         }
         // Drop everything to the ground
-        const unsigned char s = step % 4;
         int neighbor = getVoxel(world, x, y - 1, z);
         if (neighbor == -1 || voxels[neighbor] != 0) {
           for (unsigned char n = 0; n < 4; n += 1) {
-            const unsigned char ni = ((s + n) % 4) * 3;
+            const unsigned char ni = ((n + noffset) % 4) * 3;
             neighbor = getVoxel(world, x + neighbors[ni], y - 1, z + neighbors[ni + 2]);
             if (neighbor != -1 && voxels[neighbor] == 0) {
               break;
