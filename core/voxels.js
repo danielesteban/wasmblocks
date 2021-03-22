@@ -197,10 +197,7 @@ class VoxelWorld {
 
   exportVoxels() {
     if (!this.pako) this.setupPakoWorker();
-    const {
-      voxels,
-      pako,
-    } = this;
+    const { voxels, pako } = this;
     return pako.request({ data: new Uint8Array(voxels.view), operation: 'deflate' });
   }
 
