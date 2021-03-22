@@ -177,15 +177,22 @@ class VoxelWorld {
   }
 
   setupPakoWorker() {
+    let requestId = 0;
+    const requests = [];
     this.pako = new Worker('/vendor/pako.worker.js');
-    this.pako.requestId = 0;
-    this.pako.requests = [];
-    this.pako.addEventListener('message', ({ data: { id, buffer } }) => {
-      const req = this.pako.requests.findIndex((p) => p.id === id);
+    this.pako.addEventListener('message', ({ data: { id, data } }) => {
+      const req = requests.findIndex((p) => p.id === id);
       if (req !== -1) {
-        this.pako.requests.splice(req, 1)[0].resolve(buffer);
+        requests.splice(req, 1)[0].resolve(data);
       }
     });
+    this.pako.request = ({ data, operation }) => (
+      new Promise((resolve) => {
+        const id = requestId++;
+        requests.push({ id, resolve });
+        this.pako.postMessage({ id, data, operation }, [data.buffer]);
+      })
+    );
   }
 
   exportVoxels() {
@@ -194,12 +201,7 @@ class VoxelWorld {
       voxels,
       pako,
     } = this;
-    return new Promise((resolve) => {
-      const id = pako.requestId++;
-      pako.requests.push({ id, resolve });
-      const inflated = new Uint8Array(voxels.view);
-      pako.postMessage({ id, buffer: inflated, operation: 'deflate' }, [inflated.buffer]);
-    });
+    return pako.request({ data: new Uint8Array(voxels.view), operation: 'deflate' });
   }
 
   importVoxels(deflated) {
@@ -212,13 +214,7 @@ class VoxelWorld {
       voxels,
       pako,
     } = this;
-    return (
-      new Promise((resolve) => {
-        const id = pako.requestId++;
-        pako.requests.push({ id, resolve });
-        pako.postMessage({ id, buffer: deflated, operation: 'inflate' }, [deflated.buffer]);
-      })
-    )
+    return pako.request({ data: deflated, operation: 'inflate' })
       .then((inflated) => {
         // This should prolly be a method in the C implementation
         for (let z = 0, index = 0; z < depth; z += 1) {
