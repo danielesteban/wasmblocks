@@ -402,7 +402,6 @@ static const int sandNeighbors[] = {
   0, -1
 };
 
-
 void simulate(
   const World* world,
   const int* heightmap,
