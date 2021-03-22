@@ -133,11 +133,11 @@ const world = new VoxelWorld({
             for (let x = 0; x < chunks.x; x += 1, i += 1) {
               const mesh = meshes[i];
               const geometry = world.mesh(x, y, z);
-              if (geometry.indices.length) {
+              if (geometry.indices.length > 0) {
                 mesh.update(geometry);
                 if (!mesh.parent) voxels.add(mesh);
-              } else {
-                if (mesh.parent) voxels.remove(mesh);
+              } else if (mesh.parent) {
+                voxels.remove(mesh);
               }
             }
           }
