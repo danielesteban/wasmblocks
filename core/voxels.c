@@ -43,6 +43,31 @@ static const int getVoxel(
   return (z * world->width * world->height + y * world->width + x) * VOXELS_STRIDE;
 }
 
+static const unsigned int getColorFromNoise(unsigned char noise) {
+  noise = 255 - noise;
+  if (noise < 85) {
+    return (
+      ((255 - noise * 3) << 16)
+      | (0 << 8)
+      | (noise * 3)
+    );
+  }
+  if (noise < 170) {
+    noise -= 85;
+    return (
+      (0 << 16)
+      | ((noise * 3) << 8)
+      | (255 - noise * 3)
+    );
+  }
+  noise -= 170;
+  return (
+    ((noise * 3) << 16)
+    | ((255 - noise * 3) << 8)
+    | 0
+  );
+}
+
 static const float getLight(
   const unsigned char* voxels,
   const unsigned char light,
@@ -82,31 +107,6 @@ static const float getLight(
   }
 
   return _fnlFastMax(sunlight * sunlight, 0.1f) * (1.0f - ao);
-}
-
-static const unsigned int getColorFromNoise(unsigned char noise) {
-  noise = 255 - noise;
-  if (noise < 85) {
-    return (
-      ((255 - noise * 3) << 16)
-      | (0 << 8)
-      | (noise * 3)
-    );
-  }
-  if (noise < 170) {
-    noise -= 85;
-    return (
-      (0 << 16)
-      | ((noise * 3) << 8)
-      | (255 - noise * 3)
-    );
-  }
-  noise -= 170;
-  return (
-    ((noise * 3) << 16)
-    | ((255 - noise * 3) << 8)
-    | 0
-  );
 }
 
 static void floodLight(
