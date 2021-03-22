@@ -11,7 +11,7 @@ class VoxelWorld {
     this.width = width;
     this.height = height;
     this.depth = depth;
-    this.pako = new Worker('/core/pako.worker.js');
+    this.pako = new Worker('/vendor/pako.worker.js');
     this.pako.requestId = 0;
     this.pako.requests = [];
     this.pako.addEventListener('message', ({ data: { id, buffer } }) => {
