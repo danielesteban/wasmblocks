@@ -578,8 +578,8 @@ void update(
       queueB
     );
   } else if (type == 0 && current != 0) {
-    unsigned int sunlightQueue = 0;
     unsigned int lightQueue = 0;
+    unsigned int sunlightQueue = 0;
     for (unsigned char n = 0; n < 6; n += 1) {
       const int neighbor = getVoxel(
         world,
@@ -588,24 +588,13 @@ void update(
         z + neighbors[n * 3 + 2]
       );
       if (neighbor != -1) {
-        if (voxels[neighbor + VOXEL_SUNLIGHT] != 0) {
-          queueA[sunlightQueue++] = neighbor;
-        }
         if (voxels[neighbor + VOXEL_LIGHT] != 0) {
-          queueB[lightQueue++] = neighbor;
+          queueA[lightQueue++] = neighbor;
+        }
+        if (voxels[neighbor + VOXEL_SUNLIGHT] != 0) {
+          queueB[sunlightQueue++] = neighbor;
         }
       }
-    }
-    if (sunlightQueue > 0) {
-      floodLight(
-        VOXEL_SUNLIGHT,
-        world,
-        heightmap,
-        voxels,
-        queueA,
-        sunlightQueue,
-        queueC
-      );
     }
     if (lightQueue > 0) {
       floodLight(
@@ -613,11 +602,23 @@ void update(
         world,
         heightmap,
         voxels,
-        queueB,
+        queueA,
         lightQueue,
-        queueA
+        queueC
       );
     }
+    if (sunlightQueue > 0) {
+      floodLight(
+        VOXEL_SUNLIGHT,
+        world,
+        heightmap,
+        voxels,
+        queueB,
+        sunlightQueue,
+        queueC
+      );
+    }
+    
   }
 }
 
