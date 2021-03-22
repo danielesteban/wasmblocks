@@ -115,30 +115,6 @@ const world = new VoxelWorld({
       }
     }
 
-    const remesh = ({ x, y, z }) => {
-      const chunkX = Math.floor(x / world.chunkSize);
-      const chunkY = Math.floor(y / world.chunkSize);
-      const chunkZ = Math.floor(z / world.chunkSize);
-      const topY = Math.min(chunkY + 1, chunks.y - 1);
-      neighbors.forEach((neighbor) => {
-        const x = chunkX + neighbor.x;
-        const z = chunkZ + neighbor.z;
-        if (x < 0 || x >= chunks.x || z < 0 || z >= chunks.z) {
-          return;
-        }
-        for (let y = 0; y <= topY; y += 1) {
-          const mesh = meshes[z * chunks.x * chunks.y + y * chunks.x + x];
-          const geometry = world.mesh(x, y, z);
-          if (geometry.indices.length > 0) {
-            mesh.update(geometry);
-            if (!mesh.parent) voxels.add(mesh);
-          } else if (mesh.parent) {
-            voxels.remove(mesh);
-          }
-        }
-      });
-    };
-
     if (isAnimationTest) {
       let t = 0;
       scene.onAnimationTick = ({ delta }) => {
@@ -211,7 +187,27 @@ const world = new VoxelWorld({
             b: Math.min(Math.max(color.b + (Math.random() - 0.5) * noise, 0), 0xFF),
           })
         ));
-        remesh(hit.point);
+        const chunkX = Math.floor(hit.point.x / world.chunkSize);
+        const chunkY = Math.floor(hit.point.y / world.chunkSize);
+        const chunkZ = Math.floor(hit.point.z / world.chunkSize);
+        const topY = Math.min(chunkY + 1, chunks.y - 1);
+        neighbors.forEach((neighbor) => {
+          const x = chunkX + neighbor.x;
+          const z = chunkZ + neighbor.z;
+          if (x < 0 || x >= chunks.x || z < 0 || z >= chunks.z) {
+            return;
+          }
+          for (let y = 0; y <= topY; y += 1) {
+            const mesh = meshes[z * chunks.x * chunks.y + y * chunks.x + x];
+            const geometry = world.mesh(x, y, z);
+            if (geometry.indices.length > 0) {
+              mesh.update(geometry);
+              if (!mesh.parent) voxels.add(mesh);
+            } else if (mesh.parent) {
+              voxels.remove(mesh);
+            }
+          }
+        });
       };
     }
 
