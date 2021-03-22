@@ -1,4 +1,4 @@
-import './core/music.js';
+// import './core/music.js';
 import Renderer from './core/renderer.js';
 import SFX from './core/sfx.js';
 import VoxelWorld from './core/voxels.js';
@@ -63,7 +63,7 @@ const world = new VoxelWorld({
 
     world.generate({
       // type: Math.floor(Math.random() * 2),
-      unlit: isAnimationTest,
+      simulation: isAnimationTest,
     });
     if (isAnimationTest) {
       camera.position.set(
@@ -111,7 +111,7 @@ const world = new VoxelWorld({
         t += delta;
         if (t >= 5) {
           t = 0;
-          world.generate({ unlit: true });
+          world.generate({ simulation: true });
         } else {
           world.simulate(1);
         }

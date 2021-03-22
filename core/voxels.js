@@ -27,7 +27,7 @@ class VoxelWorld {
     ];
     const pages = Math.ceil(layout.reduce((total, { type, size }) => (
       total + size * type.BYTES_PER_ELEMENT
-    ), 0) / 65536) + 1;
+    ), 0) / 65536) + 2;
     const memory = new WebAssembly.Memory({ initial: pages, maximum: pages });
     (WebAssembly.instantiateStreaming ? (
       WebAssembly.instantiateStreaming(fetch(wasm), { env: { memory } })
@@ -94,7 +94,7 @@ class VoxelWorld {
   generate({
     seed = Math.floor(Math.random() * 2147483647),
     type = 0,
-    unlit = false,
+    simulation = false,
   }) {
     const {
       world,
@@ -112,14 +112,17 @@ class VoxelWorld {
       seed,
       type
     );
-    if (unlit) {
+    if (simulation) {
       // ToDo/Incomplete
       // This is a bit of a hack for the animation test.
       // The ideal solution will be keeping this light levels at 0
       // and then have an optional parameter in the mesher so it can
       // ignore the light levels when building the chunk faces
-      for (let i = 4, l = voxels.view.length; i < l; i += 5) {
-        voxels.view[i] = 32;
+      for (let i = 0, l = voxels.view.length; i < l; i += 5) {
+        if (voxels.view[i] === 1) {
+          voxels.view[i] = 2;
+        }
+        voxels.view[i + 4] = 32;
       }
     } else {
       this._propagate(

@@ -394,6 +394,15 @@ void propagate(
   );
 }
 
+static const int sandNeighbors[] = {
+  0, 0,
+  1, 0,
+  -1, 0,
+  0, 1,
+  0, -1
+};
+
+
 void simulate(
   const World* world,
   const int* heightmap,
@@ -403,29 +412,26 @@ void simulate(
   // Be aware that running this will make the heightmap data invalid.
   // This method could prolly update it but since it's not needed for
   // the animation test I decided not update it here.
-  const unsigned char inv = step % 2 == 0 ? 1 : 0;
-  const unsigned char noffset = step % 4;
+  const unsigned char invZ = ((step % 4) < 2) ? 1 : 0;
+  const unsigned char invX = ((step % 2) == 0) ? 1 : 0;
   for (int y = 1; y < world->height; y++) {
     for (int sz = 2; sz < world->depth - 2; sz++) {
-      const int z = inv == 1 ?  world->depth - 1 - sz : sz;
+      const int z = invZ == 1 ? world->depth - 1 - sz : sz;
       for (int sx = 2; sx < world->width - 2; sx++) {
-        const int x = inv == 1 ?  world->width - 1 - sx : sx;
+        const int x = invX == 1 ? world->width - 1 - sx : sx;
         const int voxel = getVoxel(world, x, y, z);
-        if (voxels[voxel] == 0) {
+        if (voxels[voxel] != 2) {
           continue;
         }
-        // Drop everything to the ground
-        int neighbor = getVoxel(world, x, y - 1, z);
-        if (neighbor == -1 || voxels[neighbor] != 0) {
-          for (unsigned char n = 0; n < 4; n += 1) {
-            const unsigned char ni = ((n + noffset) % 4) * 3;
-            neighbor = getVoxel(world, x + neighbors[ni], y - 1, z + neighbors[ni + 2]);
-            if (neighbor != -1 && voxels[neighbor] == 0) {
-              break;
-            }
+        int neighbor;
+        for (unsigned char n = 0; n < 10; n += 2) {
+          neighbor = getVoxel(world, x + sandNeighbors[n], y - 1, z + sandNeighbors[n + 1]);
+          if (neighbor != -1 && voxels[neighbor] == 0) {
+            break;
           }
         }
         if (neighbor == -1 || voxels[neighbor] != 0) {
+          voxels[voxel] = 1;
           continue;
         }
         voxels[neighbor] = voxels[voxel];
@@ -436,6 +442,12 @@ void simulate(
         voxels[voxel + VOXEL_R] = 0;
         voxels[voxel + VOXEL_G] = 0;
         voxels[voxel + VOXEL_B] = 0;
+        for (int n = 0; n < 10; n += 2) {
+          neighbor = getVoxel(world, x + sandNeighbors[n], y + 1, z + sandNeighbors[n + 1]);
+          if (neighbor != -1 && voxels[neighbor] == 1) {
+            voxels[neighbor] = 2;
+          }
+        }
       }
     }
   }
