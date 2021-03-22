@@ -62,7 +62,7 @@ const world = new VoxelWorld({
     scene.add(dome);
 
     world.generate({
-      seed: Math.floor(Math.random() * 2147483647),
+      // type: Math.floor(Math.random() * 2),
       unlit: isAnimationTest,
     });
     if (isAnimationTest) {
@@ -110,11 +110,8 @@ const world = new VoxelWorld({
       scene.onAnimationTick = ({ delta }) => {
         t += delta;
         if (t >= 5) {
-          world.generate({
-            seed: Math.floor(Math.random() * 2147483647),
-            unlit: true,
-          });
           t = 0;
+          world.generate({ unlit: true });
         } else {
           world.simulate(1);
         }
