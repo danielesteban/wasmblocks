@@ -7,6 +7,7 @@ enum {
   VOXEL_G,
   VOXEL_B,
   VOXEL_LIGHT,
+  VOXEL_SUNLIGHT,
   VOXELS_STRIDE
 };
 
@@ -71,6 +72,7 @@ static const unsigned int getColorFromNoise(unsigned char noise) {
 static const float getLight(
   const unsigned char* voxels,
   const unsigned char light,
+  const unsigned char sunlight,
   const int n1,
   const int n2,
   const int n3
@@ -85,31 +87,37 @@ static const float getLight(
     if ((v1 == 1 && v2 == 1) || v3 == 1) ao += 0.1f;
   }
 
-  float sunlight = light;
+  float avgLight = light;
+  float avgSunlight = sunlight;
   {
     const unsigned char v1 = (n1 != -1 && voxels[n1] == 0) ? 1 : 0,
                         v2 = (n2 != -1 && voxels[n2] == 0) ? 1 : 0,
                         v3 = (n3 != -1 && voxels[n3] == 0) ? 1 : 0;
     unsigned char n = 1;
     if (v1 == 1) {
-      sunlight += voxels[n1 + VOXEL_LIGHT];
+      avgLight += voxels[n1 + VOXEL_LIGHT];
+      avgSunlight += voxels[n1 + VOXEL_SUNLIGHT];
       n++;
     }
     if (v2 == 1) {
-      sunlight += voxels[n2 + VOXEL_LIGHT];
+      avgLight += voxels[n2 + VOXEL_LIGHT];
+      avgSunlight += voxels[n2 + VOXEL_SUNLIGHT];
       n++;
     }
     if ((v1 == 1 || v2 == 1) && v3 == 1) {
-      sunlight += voxels[n3 + VOXEL_LIGHT];
+      avgLight += voxels[n3 + VOXEL_LIGHT];
+      avgSunlight += voxels[n3 + VOXEL_SUNLIGHT];
       n++;
     }
-    sunlight = sunlight / n / maxLight;
+    avgLight = avgLight / n / maxLight;
+    avgSunlight = avgSunlight / n / maxLight;
   }
-
-  return _fnlFastMax(sunlight * sunlight, 0.1f) * (1.0f - ao);
+  const float luminance = _fnlFastMin(avgLight + avgSunlight, 1.0f);
+  return _fnlFastMax(luminance * luminance, 0.05f) * (1.0f - ao);
 }
 
 static void floodLight(
+  const unsigned char type,
   const World* world,
   const int* heightmap,
   unsigned char* voxels,
@@ -120,7 +128,7 @@ static void floodLight(
   unsigned int nextLength = 0;
   for (unsigned int i = 0; i < size; i++) {
     const int voxel = queue[i];
-    const unsigned char light = voxels[voxel + VOXEL_LIGHT];
+    const unsigned char light = voxels[voxel + type];
     if (light == 0) {
       continue;
     }
@@ -133,25 +141,31 @@ static void floodLight(
                 ny = y + neighbors[n * 3 + 1],
                 nz = z + neighbors[n * 3 + 2],
                 neighbor = getVoxel(world, nx, ny, nz);
-      const unsigned char nl = n == 5 && light == maxLight ? light : light - 1;
+      const unsigned char nl = type == VOXEL_SUNLIGHT && n == 5 && light == maxLight ? (
+        light
+      ) : (
+        light - 1
+      );
       if (
         neighbor == -1
         || voxels[neighbor] != 0
         || (
-          n != 5
+          type == VOXEL_SUNLIGHT
+          && n != 5
           && light == maxLight
           && ny > heightmap[(nz * world->width) + nx]
         )
-        || voxels[neighbor + VOXEL_LIGHT] >= nl
+        || voxels[neighbor + type] >= nl
       ) {
         continue;
       }
-      voxels[neighbor + VOXEL_LIGHT] = nl;
+      voxels[neighbor + type] = nl;
       next[nextLength++] = neighbor;
     }
   }
   if (nextLength > 0) {
     floodLight(
+      type,
       world,
       heightmap,
       voxels,
@@ -163,6 +177,7 @@ static void floodLight(
 }
 
 static void removeLight(
+  const unsigned char type,
   const World* world,
   const int* heightmap,
   unsigned char* voxels,
@@ -190,21 +205,22 @@ static void removeLight(
       if (neighbor == -1 || voxels[neighbor] != 0) {
         continue;
       }
-      const unsigned char nl = voxels[neighbor + VOXEL_LIGHT];
+      const unsigned char nl = voxels[neighbor + type];
       if (nl == 0) {
         continue;
       }
       if (
         nl < light
         || (
-          n == 5
+          type == VOXEL_SUNLIGHT
+          && n == 5
           && light == maxLight
           && nl == maxLight
         )
       ) {
         next[nextLength++] = neighbor;
         next[nextLength++] = nl;
-        voxels[neighbor + VOXEL_LIGHT] = 0;
+        voxels[neighbor + type] = 0;
       } else if (nl >= light) {
         floodQueue[floodQueueSize++] = neighbor;
       }
@@ -212,6 +228,7 @@ static void removeLight(
   }
   if (nextLength > 0) {
     removeLight(
+      type,
       world,
       heightmap,
       voxels,
@@ -223,6 +240,7 @@ static void removeLight(
     );
   } else if (floodQueueSize > 0) {
     floodLight(
+      type,
       world,
       heightmap,
       voxels,
@@ -379,12 +397,13 @@ void propagate(
     for (int x = 0; x < world->width; x++, voxel += VOXELS_STRIDE) {
       const int voxel = getVoxel(world, x, world->height - 1, z);
       if (voxels[voxel] == 0) {
-        voxels[voxel + VOXEL_LIGHT] = maxLight;
+        voxels[voxel + VOXEL_SUNLIGHT] = maxLight;
         queueA[queueSize++] = voxel;
       }
     }
   }
   floodLight(
+    VOXEL_SUNLIGHT,
     world,
     heightmap,
     voxels,
@@ -419,7 +438,7 @@ void simulate(
       for (int sx = 2; sx < world->width - 2; sx++) {
         const int x = invX == 1 ? world->width - 1 - sx : sx;
         const int voxel = getVoxel(world, x, y, z);
-        if (voxels[voxel] != 2) {
+        if (voxels[voxel] != 3) {
           continue;
         }
         int neighbor;
@@ -444,7 +463,7 @@ void simulate(
         for (int n = 0; n < 10; n += 2) {
           neighbor = getVoxel(world, x + sandNeighbors[n], y + 1, z + sandNeighbors[n + 1]);
           if (neighbor != -1 && voxels[neighbor] == 1) {
-            voxels[neighbor] = 2;
+            voxels[neighbor] = 3;
           }
         }
       }
@@ -494,13 +513,47 @@ void update(
   voxels[voxel + VOXEL_R] = r;
   voxels[voxel + VOXEL_G] = g;
   voxels[voxel + VOXEL_B] = b;
-  if (current == 0 && type != 0) {
+  if (current == 2) {
+    const unsigned char light = voxels[voxel + VOXEL_LIGHT];
+    voxels[voxel + VOXEL_LIGHT] = 0;
+    queueA[0] = voxel;
+    queueA[1] = light;
+    removeLight(
+      VOXEL_LIGHT,
+      world,
+      heightmap,
+      voxels,
+      queueA,
+      2,
+      queueB,
+      queueC,
+      0
+    );
+  } else if (current == 0 && type != 0) {
     const unsigned char light = voxels[voxel + VOXEL_LIGHT];
     if (light != 0) {
       voxels[voxel + VOXEL_LIGHT] = 0;
       queueA[0] = voxel;
       queueA[1] = light;
       removeLight(
+        VOXEL_LIGHT,
+        world,
+        heightmap,
+        voxels,
+        queueA,
+        2,
+        queueB,
+        queueC,
+        0
+      );
+    }
+    const unsigned char sunlight = voxels[voxel + VOXEL_SUNLIGHT];
+    if (sunlight != 0) {
+      voxels[voxel + VOXEL_SUNLIGHT] = 0;
+      queueA[0] = voxel;
+      queueA[1] = light;
+      removeLight(
+        VOXEL_SUNLIGHT,
         world,
         heightmap,
         voxels,
@@ -512,8 +565,21 @@ void update(
       );
     }
   }
-  if (type == 0 && current != 0) {
-    unsigned int queueSize = 0;
+  if (type == 2) {
+    voxels[voxel + VOXEL_LIGHT] = maxLight;
+    queueA[0] = voxel;
+    floodLight(
+      VOXEL_LIGHT,
+      world,
+      heightmap,
+      voxels,
+      queueA,
+      1,
+      queueB
+    );
+  } else if (type == 0 && current != 0) {
+    unsigned int sunlightQueue = 0;
+    unsigned int lightQueue = 0;
     for (unsigned char n = 0; n < 6; n += 1) {
       const int neighbor = getVoxel(
         world,
@@ -521,18 +587,35 @@ void update(
         y + neighbors[n * 3 + 1],
         z + neighbors[n * 3 + 2]
       );
-      if (neighbor != -1 && voxels[neighbor + VOXEL_LIGHT] != 0) {
-        queueA[queueSize++] = neighbor;
+      if (neighbor != -1) {
+        if (voxels[neighbor + VOXEL_SUNLIGHT] != 0) {
+          queueA[sunlightQueue++] = neighbor;
+        }
+        if (voxels[neighbor + VOXEL_LIGHT] != 0) {
+          queueB[lightQueue++] = neighbor;
+        }
       }
     }
-    if (queueSize > 0) {
+    if (sunlightQueue > 0) {
       floodLight(
+        VOXEL_SUNLIGHT,
         world,
         heightmap,
         voxels,
         queueA,
-        queueSize,
-        queueB
+        sunlightQueue,
+        queueC
+      );
+    }
+    if (lightQueue > 0) {
+      floodLight(
+        VOXEL_LIGHT,
+        world,
+        heightmap,
+        voxels,
+        queueB,
+        lightQueue,
+        queueA
       );
     }
   }
@@ -580,6 +663,7 @@ const int mesh(
                   west = getVoxel(world, x - 1, y, z);
         if (top != -1 && voxels[top] == 0) {
           const unsigned char light = voxels[top + VOXEL_LIGHT];
+          const unsigned char sunlight = voxels[top + VOXEL_SUNLIGHT];
           const int ts = getVoxel(world, x, y + 1, z + 1),
                     tn = getVoxel(world, x, y + 1, z - 1),
                     te = getVoxel(world, x + 1, y + 1, z),
@@ -592,17 +676,18 @@ const int mesh(
             chunkX, chunkY, chunkZ,
             r, g, b,
             x, y + 1, z + 1,
-            getLight(voxels, light, tw, ts, getVoxel(world, x - 1, y + 1, z + 1)),
+            getLight(voxels, light, sunlight, tw, ts, getVoxel(world, x - 1, y + 1, z + 1)),
             x + 1, y + 1, z + 1,
-            getLight(voxels, light, te, ts, getVoxel(world, x + 1, y + 1, z + 1)),
+            getLight(voxels, light, sunlight, te, ts, getVoxel(world, x + 1, y + 1, z + 1)),
             x + 1, y + 1, z,
-            getLight(voxels, light, te, tn, getVoxel(world, x + 1, y + 1, z - 1)),
+            getLight(voxels, light, sunlight, te, tn, getVoxel(world, x + 1, y + 1, z - 1)),
             x, y + 1, z,
-            getLight(voxels, light, tw, tn, getVoxel(world, x - 1, y + 1, z - 1))
+            getLight(voxels, light, sunlight, tw, tn, getVoxel(world, x - 1, y + 1, z - 1))
           );
         }
         if (bottom != -1 && voxels[bottom] == 0) {
           const unsigned char light = voxels[bottom + VOXEL_LIGHT];
+          const unsigned char sunlight = voxels[bottom + VOXEL_SUNLIGHT];
           const int bs = getVoxel(world, x, y - 1, z + 1),
                     bn = getVoxel(world, x, y - 1, z - 1),
                     be = getVoxel(world, x + 1, y - 1, z),
@@ -615,17 +700,18 @@ const int mesh(
             chunkX, chunkY, chunkZ,
             r, g, b,
             x, y, z,
-            getLight(voxels, light, bw, bn, getVoxel(world, x - 1, y - 1, z - 1)),
+            getLight(voxels, light, sunlight, bw, bn, getVoxel(world, x - 1, y - 1, z - 1)),
             x + 1, y, z,
-            getLight(voxels, light, be, bn, getVoxel(world, x + 1, y - 1, z - 1)),
+            getLight(voxels, light, sunlight, be, bn, getVoxel(world, x + 1, y - 1, z - 1)),
             x + 1, y, z + 1,
-            getLight(voxels, light, be, bs, getVoxel(world, x + 1, y - 1, z + 1)),
+            getLight(voxels, light, sunlight, be, bs, getVoxel(world, x + 1, y - 1, z + 1)),
             x, y, z + 1,
-            getLight(voxels, light, bw, bs, getVoxel(world, x - 1, y - 1, z + 1))
+            getLight(voxels, light, sunlight, bw, bs, getVoxel(world, x - 1, y - 1, z + 1))
           );
         }
         if (south != -1 && voxels[south] == 0) {
           const unsigned char light = voxels[south + VOXEL_LIGHT];
+          const unsigned char sunlight = voxels[south + VOXEL_SUNLIGHT];
           const int st = getVoxel(world, x, y + 1, z + 1),
                     sb = getVoxel(world, x, y - 1, z + 1),
                     se = getVoxel(world, x + 1, y, z + 1),
@@ -638,17 +724,18 @@ const int mesh(
             chunkX, chunkY, chunkZ,
             r, g, b,
             x, y, z + 1,
-            getLight(voxels, light, sw, sb, getVoxel(world, x - 1, y - 1, z + 1)),
+            getLight(voxels, light, sunlight, sw, sb, getVoxel(world, x - 1, y - 1, z + 1)),
             x + 1, y, z + 1,
-            getLight(voxels, light, se, sb, getVoxel(world, x + 1, y - 1, z + 1)),
+            getLight(voxels, light, sunlight, se, sb, getVoxel(world, x + 1, y - 1, z + 1)),
             x + 1, y + 1, z + 1,
-            getLight(voxels, light, se, st, getVoxel(world, x + 1, y + 1, z + 1)),
+            getLight(voxels, light, sunlight, se, st, getVoxel(world, x + 1, y + 1, z + 1)),
             x, y + 1, z + 1,
-            getLight(voxels, light, sw, st, getVoxel(world, x - 1, y + 1, z + 1))
+            getLight(voxels, light, sunlight, sw, st, getVoxel(world, x - 1, y + 1, z + 1))
           );
         }
         if (north != -1 && voxels[north] == 0) {
           const unsigned char light = voxels[north + VOXEL_LIGHT];
+          const unsigned char sunlight = voxels[north + VOXEL_SUNLIGHT];
           const int nt = getVoxel(world, x, y + 1, z - 1),
                     nb = getVoxel(world, x, y - 1, z - 1),
                     ne = getVoxel(world, x + 1, y, z - 1),
@@ -661,17 +748,18 @@ const int mesh(
             chunkX, chunkY, chunkZ,
             r, g, b,
             x + 1, y, z,
-            getLight(voxels, light, ne, nb, getVoxel(world, x + 1, y - 1, z - 1)),
+            getLight(voxels, light, sunlight, ne, nb, getVoxel(world, x + 1, y - 1, z - 1)),
             x, y, z,
-            getLight(voxels, light, nw, nb, getVoxel(world, x - 1, y - 1, z - 1)),
+            getLight(voxels, light, sunlight, nw, nb, getVoxel(world, x - 1, y - 1, z - 1)),
             x, y + 1, z,
-            getLight(voxels, light, nw, nt, getVoxel(world, x - 1, y + 1, z - 1)),
+            getLight(voxels, light, sunlight, nw, nt, getVoxel(world, x - 1, y + 1, z - 1)),
             x + 1, y + 1, z,
-            getLight(voxels, light, ne, nt, getVoxel(world, x + 1, y + 1, z - 1))
+            getLight(voxels, light, sunlight, ne, nt, getVoxel(world, x + 1, y + 1, z - 1))
           );
         }
         if (east != -1 && voxels[east] == 0) {
           const unsigned char light = voxels[east + VOXEL_LIGHT];
+          const unsigned char sunlight = voxels[east + VOXEL_SUNLIGHT];
           const int et = getVoxel(world, x + 1, y + 1, z),
                     eb = getVoxel(world, x + 1, y - 1, z),
                     es = getVoxel(world, x + 1, y, z + 1),
@@ -684,17 +772,18 @@ const int mesh(
             chunkX, chunkY, chunkZ,
             r, g, b,
             x + 1, y, z + 1,
-            getLight(voxels, light, es, eb, getVoxel(world, x + 1, y - 1, z + 1)),
+            getLight(voxels, light, sunlight, es, eb, getVoxel(world, x + 1, y - 1, z + 1)),
             x + 1, y, z,
-            getLight(voxels, light, en, eb, getVoxel(world, x + 1, y - 1, z - 1)),
+            getLight(voxels, light, sunlight, en, eb, getVoxel(world, x + 1, y - 1, z - 1)),
             x + 1, y + 1, z,
-            getLight(voxels, light, en, et, getVoxel(world, x + 1, y + 1, z - 1)),
+            getLight(voxels, light, sunlight, en, et, getVoxel(world, x + 1, y + 1, z - 1)),
             x + 1, y + 1, z + 1,
-            getLight(voxels, light, es, et, getVoxel(world, x + 1, y + 1, z + 1))
+            getLight(voxels, light, sunlight, es, et, getVoxel(world, x + 1, y + 1, z + 1))
           );
         }
         if (west != -1 && voxels[west] == 0) {
           const unsigned char light = voxels[west + VOXEL_LIGHT];
+          const unsigned char sunlight = voxels[west + VOXEL_SUNLIGHT];
           const int wt = getVoxel(world, x - 1, y + 1, z),
                     wb = getVoxel(world, x - 1, y - 1, z),
                     ws = getVoxel(world, x - 1, y, z + 1),
@@ -707,13 +796,13 @@ const int mesh(
             chunkX, chunkY, chunkZ,
             r, g, b,
             x, y, z,
-            getLight(voxels, light, wn, wb, getVoxel(world, x - 1, y - 1, z - 1)),
+            getLight(voxels, light, sunlight, wn, wb, getVoxel(world, x - 1, y - 1, z - 1)),
             x, y, z + 1,
-            getLight(voxels, light, ws, wb, getVoxel(world, x - 1, y - 1, z + 1)),
+            getLight(voxels, light, sunlight, ws, wb, getVoxel(world, x - 1, y - 1, z + 1)),
             x, y + 1, z + 1,
-            getLight(voxels, light, ws, wt, getVoxel(world, x - 1, y + 1, z + 1)),
+            getLight(voxels, light, sunlight, ws, wt, getVoxel(world, x - 1, y + 1, z + 1)),
             x, y + 1, z,
-            getLight(voxels, light, wn, wt, getVoxel(world, x - 1, y + 1, z - 1))
+            getLight(voxels, light, sunlight, wn, wt, getVoxel(world, x - 1, y + 1, z - 1))
           );
         }
       }
