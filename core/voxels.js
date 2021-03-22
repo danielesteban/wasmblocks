@@ -11,15 +11,6 @@ class VoxelWorld {
     this.width = width;
     this.height = height;
     this.depth = depth;
-    this.pako = new Worker('/vendor/pako.worker.js');
-    this.pako.requestId = 0;
-    this.pako.requests = [];
-    this.pako.addEventListener('message', ({ data: { id, buffer } }) => {
-      const req = this.pako.requests.findIndex((p) => p.id === id);
-      if (req !== -1) {
-        this.pako.requests.splice(req, 1)[0].resolve(buffer);
-      }
-    });
     this.simulationStep = 0;
     const maxFaces = Math.ceil(chunkSize * chunkSize * chunkSize * 0.5) * 6; // worst possible case
     const queueSize = width * depth * 2;
@@ -185,7 +176,20 @@ class VoxelWorld {
     );
   }
 
+  setupPakoWorker() {
+    this.pako = new Worker('/vendor/pako.worker.js');
+    this.pako.requestId = 0;
+    this.pako.requests = [];
+    this.pako.addEventListener('message', ({ data: { id, buffer } }) => {
+      const req = this.pako.requests.findIndex((p) => p.id === id);
+      if (req !== -1) {
+        this.pako.requests.splice(req, 1)[0].resolve(buffer);
+      }
+    });
+  }
+
   exportVoxels() {
+    if (!this.pako) this.setupPakoWorker();
     const {
       voxels,
       pako,
@@ -199,6 +203,7 @@ class VoxelWorld {
   }
 
   importVoxels(deflated) {
+    if (!this.pako) this.setupPakoWorker();
     const {
       width,
       height,
