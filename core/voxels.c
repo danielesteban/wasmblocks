@@ -278,10 +278,10 @@ static void pushFace(
   const int wx3, const int wy3, const int wz3, const unsigned int l3,
   const int wx4, const int wy4, const int wz4, const unsigned int l4
 ) {
-  const float ao1 = (l1 >> 16) / 255.0f,
-                      ao2 = (l2 >> 16) / 255.0f,
-                      ao3 = (l3 >> 16) / 255.0f,
-                      ao4 = (l4 >> 16) / 255.0f;
+  const float ao1 = ((l1 >> 16) & 0xFF) / 255.0f,
+                      ao2 = ((l2 >> 16) & 0xFF) / 255.0f,
+                      ao3 = ((l3 >> 16) & 0xFF) / 255.0f,
+                      ao4 = ((l4 >> 16) & 0xFF) / 255.0f;
   const unsigned int  vertex = *faces * 4,
                       vertexOffset = vertex * 8,
                       indexOffset = *faces * 6,
