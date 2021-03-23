@@ -1,7 +1,14 @@
 #define FNL_IMPL
 #include "../vendor/FastNoiseLite.h"
 
-enum {
+enum BlockTypes {
+  TYPE_AIR,
+  TYPE_STONE,
+  TYPE_LIGHT,
+  TYPE_SAND
+};
+
+enum VoxelFields {
   VOXEL_TYPE,
   VOXEL_R,
   VOXEL_G,
@@ -79,9 +86,9 @@ static const unsigned int getLight(
 ) {
   unsigned char ao = 0;
   {
-    const unsigned char v1 = (n1 != -1 && voxels[n1] != 0) ? 1 : 0,
-                        v2 = (n2 != -1 && voxels[n2] != 0) ? 1 : 0,
-                        v3 = (n3 != -1 && voxels[n3] != 0) ? 1 : 0;
+    const unsigned char v1 = (n1 != -1 && voxels[n1] != TYPE_AIR) ? 1 : 0,
+                        v2 = (n2 != -1 && voxels[n2] != TYPE_AIR) ? 1 : 0,
+                        v3 = (n3 != -1 && voxels[n3] != TYPE_AIR) ? 1 : 0;
     if (v1 == 1) ao += 20;
     if (v2 == 1) ao += 20;
     if ((v1 == 1 && v2 == 1) || v3 == 1) ao += 20;
@@ -90,9 +97,9 @@ static const unsigned int getLight(
   float avgLight = light;
   float avgSunlight = sunlight;
   {
-    const unsigned char v1 = (n1 != -1 && voxels[n1] == 0) ? 1 : 0,
-                        v2 = (n2 != -1 && voxels[n2] == 0) ? 1 : 0,
-                        v3 = (n3 != -1 && voxels[n3] == 0) ? 1 : 0;
+    const unsigned char v1 = (n1 != -1 && voxels[n1] == TYPE_AIR) ? 1 : 0,
+                        v2 = (n2 != -1 && voxels[n2] == TYPE_AIR) ? 1 : 0,
+                        v3 = (n3 != -1 && voxels[n3] == TYPE_AIR) ? 1 : 0;
     unsigned char n = 1;
     if (v1 == 1) {
       avgLight += voxels[n1 + VOXEL_LIGHT];
@@ -118,7 +125,7 @@ static const unsigned int getLight(
 }
 
 static void floodLight(
-  const unsigned char type,
+  const unsigned char channel,
   const World* world,
   const int* heightmap,
   unsigned char* voxels,
@@ -129,7 +136,7 @@ static void floodLight(
   unsigned int nextLength = 0;
   for (unsigned int i = 0; i < size; i++) {
     const int voxel = queue[i];
-    const unsigned char light = voxels[voxel + type];
+    const unsigned char light = voxels[voxel + channel];
     if (light == 0) {
       continue;
     }
@@ -142,31 +149,31 @@ static void floodLight(
                 ny = y + neighbors[n * 3 + 1],
                 nz = z + neighbors[n * 3 + 2],
                 neighbor = getVoxel(world, nx, ny, nz);
-      const unsigned char nl = type == VOXEL_SUNLIGHT && n == 5 && light == maxLight ? (
+      const unsigned char nl = channel == VOXEL_SUNLIGHT && n == 5 && light == maxLight ? (
         light
       ) : (
         light - 1
       );
       if (
         neighbor == -1
-        || voxels[neighbor] != 0
+        || voxels[neighbor] != TYPE_AIR
         || (
-          type == VOXEL_SUNLIGHT
+          channel == VOXEL_SUNLIGHT
           && n != 5
           && light == maxLight
           && ny > heightmap[(nz * world->width) + nx]
         )
-        || voxels[neighbor + type] >= nl
+        || voxels[neighbor + channel] >= nl
       ) {
         continue;
       }
-      voxels[neighbor + type] = nl;
+      voxels[neighbor + channel] = nl;
       next[nextLength++] = neighbor;
     }
   }
   if (nextLength > 0) {
     floodLight(
-      type,
+      channel,
       world,
       heightmap,
       voxels,
@@ -178,7 +185,7 @@ static void floodLight(
 }
 
 static void removeLight(
-  const unsigned char type,
+  const unsigned char channel,
   const World* world,
   const int* heightmap,
   unsigned char* voxels,
@@ -203,17 +210,17 @@ static void removeLight(
         y + neighbors[n * 3 + 1],
         z + neighbors[n * 3 + 2]
       );
-      if (neighbor == -1 || voxels[neighbor] != 0) {
+      if (neighbor == -1 || voxels[neighbor] != TYPE_AIR) {
         continue;
       }
-      const unsigned char nl = voxels[neighbor + type];
+      const unsigned char nl = voxels[neighbor + channel];
       if (nl == 0) {
         continue;
       }
       if (
         nl < light
         || (
-          type == VOXEL_SUNLIGHT
+          channel == VOXEL_SUNLIGHT
           && n == 5
           && light == maxLight
           && nl == maxLight
@@ -221,7 +228,7 @@ static void removeLight(
       ) {
         next[nextLength++] = neighbor;
         next[nextLength++] = nl;
-        voxels[neighbor + type] = 0;
+        voxels[neighbor + channel] = 0;
       } else if (nl >= light) {
         floodQueue[floodQueueSize++] = neighbor;
       }
@@ -229,7 +236,7 @@ static void removeLight(
   }
   if (nextLength > 0) {
     removeLight(
-      type,
+      channel,
       world,
       heightmap,
       voxels,
@@ -241,7 +248,7 @@ static void removeLight(
     );
   } else if (floodQueueSize > 0) {
     floodLight(
-      type,
+      channel,
       world,
       heightmap,
       voxels,
@@ -385,7 +392,7 @@ void generate(
         if (isBlock == 1) {
           const unsigned int color = getColorFromNoise(0xFF * n);
           const int heightmapIndex = z * world->width + x;
-          voxels[voxel] = 0x01;
+          voxels[voxel] = TYPE_STONE;
           voxels[voxel + VOXEL_R] = (color >> 16) & 0xFF;
           voxels[voxel + VOXEL_G] = (color >> 8) & 0xFF;
           voxels[voxel + VOXEL_B] = color & 0xFF;
@@ -409,7 +416,7 @@ void propagate(
   for (int z = 0, voxel = 0; z < world->depth; z++) {
     for (int x = 0; x < world->width; x++, voxel += VOXELS_STRIDE) {
       const int voxel = getVoxel(world, x, world->height - 1, z);
-      if (voxels[voxel] == 0) {
+      if (voxels[voxel] == TYPE_AIR) {
         voxels[voxel + VOXEL_SUNLIGHT] = maxLight;
         queueA[queueSize++] = voxel;
       }
@@ -451,18 +458,18 @@ void simulate(
       for (int sx = 2; sx < world->width - 2; sx++) {
         const int x = invX == 1 ? world->width - 1 - sx : sx;
         const int voxel = getVoxel(world, x, y, z);
-        if (voxels[voxel] != 3) {
+        if (voxels[voxel] != TYPE_SAND) {
           continue;
         }
         int neighbor;
         for (unsigned char n = 0; n < 10; n += 2) {
           neighbor = getVoxel(world, x + sandNeighbors[n], y - 1, z + sandNeighbors[n + 1]);
-          if (neighbor != -1 && voxels[neighbor] == 0) {
+          if (neighbor != -1 && voxels[neighbor] == TYPE_AIR) {
             break;
           }
         }
-        if (neighbor == -1 || voxels[neighbor] != 0) {
-          voxels[voxel] = 1;
+        if (neighbor == -1 || voxels[neighbor] != TYPE_AIR) {
+          voxels[voxel] = TYPE_STONE;
           continue;
         }
         voxels[neighbor] = voxels[voxel];
@@ -475,8 +482,8 @@ void simulate(
         voxels[voxel + VOXEL_B] = 0;
         for (int n = 0; n < 10; n += 2) {
           neighbor = getVoxel(world, x + sandNeighbors[n], y + 1, z + sandNeighbors[n + 1]);
-          if (neighbor != -1 && voxels[neighbor] == 1) {
-            voxels[neighbor] = 3;
+          if (neighbor != -1 && voxels[neighbor] == TYPE_STONE) {
+            voxels[neighbor] = TYPE_SAND;
           }
         }
       }
@@ -510,10 +517,10 @@ void update(
   const int heightmapIndex = z * world->width + x;
   const int height = heightmap[heightmapIndex];
   const unsigned char current = voxels[voxel];
-  if (type == 0) {
+  if (type == TYPE_AIR) {
     if (y == height) {
       for (int h = y - 1; h >= 0; h --) {
-        if (h == 0 || voxels[getVoxel(world, x, h, z)] != 0) {
+        if (h == 0 || voxels[getVoxel(world, x, h, z)] != TYPE_AIR) {
           heightmap[heightmapIndex] = h;
           break;
         }
@@ -526,7 +533,7 @@ void update(
   voxels[voxel + VOXEL_R] = r;
   voxels[voxel + VOXEL_G] = g;
   voxels[voxel + VOXEL_B] = b;
-  if (current == 2) {
+  if (current == TYPE_LIGHT) {
     const unsigned char light = voxels[voxel + VOXEL_LIGHT];
     voxels[voxel + VOXEL_LIGHT] = 0;
     queueA[0] = voxel;
@@ -542,7 +549,7 @@ void update(
       queueC,
       0
     );
-  } else if (current == 0 && type != 0) {
+  } else if (current == TYPE_AIR && type != TYPE_AIR) {
     const unsigned char light = voxels[voxel + VOXEL_LIGHT];
     if (light != 0) {
       voxels[voxel + VOXEL_LIGHT] = 0;
@@ -578,7 +585,7 @@ void update(
       );
     }
   }
-  if (type == 2) {
+  if (type == TYPE_LIGHT) {
     voxels[voxel + VOXEL_LIGHT] = maxLight;
     queueA[0] = voxel;
     floodLight(
@@ -590,7 +597,7 @@ void update(
       1,
       queueB
     );
-  } else if (type == 0 && current != 0) {
+  } else if (type == TYPE_AIR && current != TYPE_AIR) {
     unsigned int lightQueue = 0;
     unsigned int sunlightQueue = 0;
     for (unsigned char n = 0; n < 6; n += 1) {
@@ -663,7 +670,7 @@ const int mesh(
     for (int y = chunkY; y < chunkY + chunkSize; y++) {
       for (int x = chunkX; x < chunkX + chunkSize; x++) {
         const int voxel = getVoxel(world, x, y, z);
-        if (voxels[voxel] == 0) {
+        if (voxels[voxel] == TYPE_AIR) {
           continue;
         }
         const unsigned char r = voxels[voxel + VOXEL_R],
@@ -675,7 +682,7 @@ const int mesh(
                   north = getVoxel(world, x, y, z - 1),
                   east = getVoxel(world, x + 1, y, z),
                   west = getVoxel(world, x - 1, y, z);
-        if (top != -1 && voxels[top] == 0) {
+        if (top != -1 && voxels[top] == TYPE_AIR) {
           const unsigned char light = voxels[top + VOXEL_LIGHT];
           const unsigned char sunlight = voxels[top + VOXEL_SUNLIGHT];
           const int ts = getVoxel(world, x, y + 1, z + 1),
@@ -699,7 +706,7 @@ const int mesh(
             getLight(voxels, light, sunlight, tw, tn, getVoxel(world, x - 1, y + 1, z - 1))
           );
         }
-        if (bottom != -1 && voxels[bottom] == 0) {
+        if (bottom != -1 && voxels[bottom] == TYPE_AIR) {
           const unsigned char light = voxels[bottom + VOXEL_LIGHT];
           const unsigned char sunlight = voxels[bottom + VOXEL_SUNLIGHT];
           const int bs = getVoxel(world, x, y - 1, z + 1),
@@ -747,7 +754,7 @@ const int mesh(
             getLight(voxels, light, sunlight, sw, st, getVoxel(world, x - 1, y + 1, z + 1))
           );
         }
-        if (north != -1 && voxels[north] == 0) {
+        if (north != -1 && voxels[north] == TYPE_AIR) {
           const unsigned char light = voxels[north + VOXEL_LIGHT];
           const unsigned char sunlight = voxels[north + VOXEL_SUNLIGHT];
           const int nt = getVoxel(world, x, y + 1, z - 1),
@@ -771,7 +778,7 @@ const int mesh(
             getLight(voxels, light, sunlight, ne, nt, getVoxel(world, x + 1, y + 1, z - 1))
           );
         }
-        if (east != -1 && voxels[east] == 0) {
+        if (east != -1 && voxels[east] == TYPE_AIR) {
           const unsigned char light = voxels[east + VOXEL_LIGHT];
           const unsigned char sunlight = voxels[east + VOXEL_SUNLIGHT];
           const int et = getVoxel(world, x + 1, y + 1, z),
@@ -795,7 +802,7 @@ const int mesh(
             getLight(voxels, light, sunlight, es, et, getVoxel(world, x + 1, y + 1, z + 1))
           );
         }
-        if (west != -1 && voxels[west] == 0) {
+        if (west != -1 && voxels[west] == TYPE_AIR) {
           const unsigned char light = voxels[west + VOXEL_LIGHT];
           const unsigned char sunlight = voxels[west + VOXEL_SUNLIGHT];
           const int wt = getVoxel(world, x - 1, y + 1, z),
