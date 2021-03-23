@@ -22,7 +22,7 @@ const { camera, controls } = renderer;
 const meshes = [];
 const scale = 0.5;
 const scene = new Scene();
-scene.background = new Color(0x0a141e);
+scene.background = new Color(0x000101);
 scene.add(camera);
 const sfx = new SFX({ listener: controls.listener });
 let sounds;

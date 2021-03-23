@@ -16,9 +16,9 @@ class VoxelChunk extends Mesh {
     VoxelChunk.material = new ShaderMaterial({
       uniforms: {
         ...UniformsUtils.clone(uniforms),
-        ambientIntensity: { value: 0.1 },
+        ambientIntensity: { value: 0.05 },
         lightIntensity: { value: 0.5 },
-        sunlightIntensity: { value: 0.7 },
+        sunlightIntensity: { value: 0 },
       },
       vertexShader: vertexShader
         .replace(
