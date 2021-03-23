@@ -69,7 +69,7 @@ static const unsigned int getColorFromNoise(unsigned char noise) {
   );
 }
 
-static const float getLight(
+static const unsigned int getLight(
   const unsigned char* voxels,
   const unsigned char light,
   const unsigned char sunlight,
@@ -77,14 +77,14 @@ static const float getLight(
   const int n2,
   const int n3
 ) {
-  float ao = 0.0f;
+  unsigned char ao = 0;
   {
     const unsigned char v1 = (n1 != -1 && voxels[n1] != 0) ? 1 : 0,
                         v2 = (n2 != -1 && voxels[n2] != 0) ? 1 : 0,
                         v3 = (n3 != -1 && voxels[n3] != 0) ? 1 : 0;
-    if (v1 == 1) ao += 0.1f;
-    if (v2 == 1) ao += 0.1f;
-    if ((v1 == 1 && v2 == 1) || v3 == 1) ao += 0.1f;
+    if (v1 == 1) ao += 20;
+    if (v2 == 1) ao += 20;
+    if ((v1 == 1 && v2 == 1) || v3 == 1) ao += 20;
   }
 
   float avgLight = light;
@@ -109,11 +109,12 @@ static const float getLight(
       avgSunlight += voxels[n3 + VOXEL_SUNLIGHT];
       n++;
     }
-    avgLight = avgLight / n / maxLight;
-    avgSunlight = avgSunlight / n / maxLight;
+    avgLight = avgLight / n / maxLight * 0xFF;
+    avgSunlight = avgSunlight / n / maxLight * 0xFF;
   }
-  const float luminance = _fnlFastMin(avgLight + avgSunlight, 1.0f);
-  return _fnlFastMax(luminance * luminance, 0.05f) * (1.0f - ao);
+  return (
+    (ao << 16) | (((unsigned char) avgLight) << 8) | ((unsigned char) avgSunlight)
+  );
 }
 
 static void floodLight(
@@ -272,15 +273,19 @@ static void pushFace(
   unsigned char* vertices,
   const int chunkX, const int chunkY, const int chunkZ,
   const unsigned char r, const unsigned char g, const unsigned char b,
-  const int wx1, const int wy1, const int wz1, const float l1,
-  const int wx2, const int wy2, const int wz2, const float l2,
-  const int wx3, const int wy3, const int wz3, const float l3,
-  const int wx4, const int wy4, const int wz4, const float l4
+  const int wx1, const int wy1, const int wz1, const unsigned int l1,
+  const int wx2, const int wy2, const int wz2, const unsigned int l2,
+  const int wx3, const int wy3, const int wz3, const unsigned int l3,
+  const int wx4, const int wy4, const int wz4, const unsigned int l4
 ) {
+  const float ao1 = (l1 >> 16) / 255.0f,
+                      ao2 = (l2 >> 16) / 255.0f,
+                      ao3 = (l3 >> 16) / 255.0f,
+                      ao4 = (l4 >> 16) / 255.0f;
   const unsigned int  vertex = *faces * 4,
-                      vertexOffset = vertex * 6,
+                      vertexOffset = vertex * 8,
                       indexOffset = *faces * 6,
-                      flipFace = l1 + l3 < l2 + l4 ? 1 : 0; // Fixes interpolation anisotropy
+                      flipFace = ao1 + ao3 > ao2 + ao4 ? 1 : 0; // Fixes interpolation anisotropy
   const unsigned char x1 = wx1 - chunkX,
                       y1 = wy1 - chunkY,
                       z1 = wz1 - chunkZ,
@@ -298,27 +303,35 @@ static void pushFace(
   vertices[vertexOffset] = x1;
   vertices[vertexOffset + 1] = y1;
   vertices[vertexOffset + 2] = z1;
-  vertices[vertexOffset + 3] = r * l1;
-  vertices[vertexOffset + 4] = g * l1;
-  vertices[vertexOffset + 5] = b * l1;
-  vertices[vertexOffset + 6] = x2;
-  vertices[vertexOffset + 7] = y2;
-  vertices[vertexOffset + 8] = z2;
-  vertices[vertexOffset + 9] = r * l2;
-  vertices[vertexOffset + 10] = g * l2;
-  vertices[vertexOffset + 11] = b * l2;
-  vertices[vertexOffset + 12] = x3;
-  vertices[vertexOffset + 13] = y3;
-  vertices[vertexOffset + 14] = z3;
-  vertices[vertexOffset + 15] = r * l3;
-  vertices[vertexOffset + 16] = g * l3;
-  vertices[vertexOffset + 17] = b * l3;
-  vertices[vertexOffset + 18] = x4;
-  vertices[vertexOffset + 19] = y4;
-  vertices[vertexOffset + 20] = z4;
-  vertices[vertexOffset + 21] = r * l4;
-  vertices[vertexOffset + 22] = g * l4;
-  vertices[vertexOffset + 23] = b * l4;
+  vertices[vertexOffset + 3] = r * (1.0f - ao1);
+  vertices[vertexOffset + 4] = g * (1.0f - ao1);
+  vertices[vertexOffset + 5] = b * (1.0f - ao1);
+  vertices[vertexOffset + 6] = (l1 >> 8) & 0xFF;
+  vertices[vertexOffset + 7] = l1 & 0xFF;
+  vertices[vertexOffset + 8] = x2;
+  vertices[vertexOffset + 9] = y2;
+  vertices[vertexOffset + 10] = z2;
+  vertices[vertexOffset + 11] = r * (1.0f - ao2);
+  vertices[vertexOffset + 12] = g * (1.0f - ao2);
+  vertices[vertexOffset + 13] = b * (1.0f - ao2);
+  vertices[vertexOffset + 14] = (l2 >> 8) & 0xFF;
+  vertices[vertexOffset + 15] = l2 & 0xFF;
+  vertices[vertexOffset + 16] = x3;
+  vertices[vertexOffset + 17] = y3;
+  vertices[vertexOffset + 18] = z3;
+  vertices[vertexOffset + 19] = r * (1.0f - ao3);
+  vertices[vertexOffset + 20] = g * (1.0f - ao3);
+  vertices[vertexOffset + 21] = b * (1.0f - ao3);
+  vertices[vertexOffset + 22] = (l3 >> 8) & 0xFF;
+  vertices[vertexOffset + 23] = l3 & 0xFF;
+  vertices[vertexOffset + 24] = x4;
+  vertices[vertexOffset + 25] = y4;
+  vertices[vertexOffset + 26] = z4;
+  vertices[vertexOffset + 27] = r * (1.0f - ao4);
+  vertices[vertexOffset + 28] = g * (1.0f - ao4);
+  vertices[vertexOffset + 29] = b * (1.0f - ao4);
+  vertices[vertexOffset + 30] = (l4 >> 8) & 0xFF;
+  vertices[vertexOffset + 31] = l4 & 0xFF;
   indices[indexOffset] = vertex + flipFace;
   indices[indexOffset + 1] = vertex + flipFace + 1;
   indices[indexOffset + 2] = vertex + flipFace + 2;

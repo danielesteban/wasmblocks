@@ -14,14 +14,28 @@ class VoxelChunk extends Mesh {
   static setupMaterial() {
     const { uniforms, vertexShader, fragmentShader } = ShaderLib.basic;
     VoxelChunk.material = new ShaderMaterial({
-      uniforms: UniformsUtils.clone(uniforms),
+      uniforms: {
+        ...UniformsUtils.clone(uniforms),
+        ambientIntensity: { value: 0.1 },
+        lightIntensity: { value: 0.5 },
+        sunlightIntensity: { value: 0.7 },
+      },
       vertexShader: vertexShader
+        .replace(
+          '#include <common>',
+          [
+            'attribute vec2 light;',
+            'uniform float ambientIntensity;',
+            'uniform float lightIntensity;',
+            'uniform float sunlightIntensity;',
+            '#include <common>',
+          ].join('\n')
+        )
         .replace(
           '#include <color_vertex>',
           [
-            '#ifdef USE_COLOR',
-            '  vColor.xyz = color.xyz / 255.0;',
-            '#endif',
+            'vColor.xyz = color.xyz / 255.0;',
+            'vColor.xyz *= clamp(pow(light.x / 255.0, 2.0) * lightIntensity + pow(light.y / 255.0, 2.0) * sunlightIntensity, ambientIntensity, 1.0);',
           ].join('\n')
         ),
       fragmentShader,
@@ -49,10 +63,11 @@ class VoxelChunk extends Mesh {
 
   update({ bounds, indices, vertices }) {
     const { geometry } = this;
-    vertices = new InterleavedBuffer(vertices, 6);
+    vertices = new InterleavedBuffer(vertices, 8);
     geometry.setIndex(new BufferAttribute(indices, 1));
     geometry.setAttribute('position', new InterleavedBufferAttribute(vertices, 3, 0));
     geometry.setAttribute('color', new InterleavedBufferAttribute(vertices, 3, 3));
+    geometry.setAttribute('light', new InterleavedBufferAttribute(vertices, 2, 6));
     if (geometry.boundingSphere === null) {
       geometry.boundingSphere = new Sphere();
     }
