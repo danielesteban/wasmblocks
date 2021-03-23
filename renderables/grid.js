@@ -15,6 +15,7 @@ class Grid extends Mesh {
     Grid.material = new ShaderMaterial({
       uniforms: {
         fogColor: { value: new Color(0x0a141e) },
+        intensity: { value: 1 },
       },
       vertexShader: [
         'varying vec2 gridPosition;',
@@ -32,12 +33,13 @@ class Grid extends Mesh {
         'const vec3 voxelsColor = vec3(0.7);',
         'const float fogDensity = 0.02;',
         'uniform vec3 fogColor;',
+        'uniform float intensity;',
         'float line(vec2 position) {',
         '  vec2 coord = abs(fract(position - 0.5) - 0.5) / fwidth(position);',
         '  return 1.0 - min(min(coord.x, coord.y), 1.0);',
         '}',
         'void main() {',
-        '  vec3 grid = chunkColor * line(gridPosition / 16.0) + voxelsColor * line(gridPosition * 2.0);',
+        '  vec3 grid = (chunkColor * line(gridPosition / 16.0) + voxelsColor * line(gridPosition * 2.0)) * intensity;',
         '  float fogDepth = length(fragPosition);',
         '  float fogFactor = 1.0 - exp( - fogDensity * fogDensity * fogDepth * fogDepth );',
         '  gl_FragColor = vec4(mix(grid, fogColor, fogFactor), 1.0);',
