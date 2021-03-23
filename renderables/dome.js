@@ -15,7 +15,7 @@ class Dome extends Mesh {
   static setupMaterial() {
     Dome.material = new ShaderMaterial({
       uniforms: {
-        background: { value: new Color(0x336699) },
+        background: { value: new Color(0x020507) },
       },
       vertexShader: [
         'varying float altitude;',
