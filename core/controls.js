@@ -24,6 +24,7 @@ class Controls {
       primary: false,
       secondary: false,
       tertiary: false,
+      toggle: false,
     };
     this.buttonState = { ...this.buttons };
     this.listener = new AudioListener();
@@ -149,7 +150,7 @@ class Controls {
           .multiplyScalar(delta * speed)
       );
     }
-    ['primary', 'secondary', 'tertiary'].forEach((button) => {
+    ['primary', 'secondary', 'tertiary', 'toggle'].forEach((button) => {
       const state = buttonState[button];
       buttons[`${button}Down`] = state && buttons[button] !== state;
       buttons[`${button}Up`] = !state && buttons[button] !== state;
@@ -163,12 +164,13 @@ class Controls {
     buttonState.primary = false;
     buttonState.secondary = false;
     buttonState.tertiary = false;
+    buttonState.toggle = false;
     this.buttons = { ...buttonState };
     keyboard.set(0, 0, 0);
   }
 
   onKeyDown({ keyCode, repeat }) {
-    const { keyboard } = this;
+    const { buttonState, keyboard } = this;
     if (repeat) return;
     switch (keyCode) {
       case 16:
@@ -189,13 +191,16 @@ class Controls {
       case 68:
         if (keyboard.x === 0) keyboard.x = 1;
         break;
+      case 76:
+        buttonState.toggle = true;
+        break;
       default:
         break;
     }
   }
 
   onKeyUp({ keyCode, repeat }) {
-    const { keyboard } = this;
+    const { buttonState, keyboard } = this;
     if (repeat) return;
     switch (keyCode) {
       case 16:
@@ -215,6 +220,9 @@ class Controls {
         break;
       case 68:
         if (keyboard.x > 0) keyboard.x = 0;
+        break;
+      case 76:
+        buttonState.toggle = false;
         break;
       default:
         break;

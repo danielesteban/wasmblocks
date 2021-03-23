@@ -34,6 +34,18 @@ Promise.all([...Array(4)].map(() => (
     })
 ))).then((sfx) => { sounds = sfx; });
 
+let light = 0;
+let targetLight = 1;
+const updateLight = (intensity) => {
+  light = intensity;
+  Dome.material.uniforms.background.value.setHex(0x336699).multiplyScalar(Math.max(intensity, 0.05));
+  scene.background.copy(Dome.material.uniforms.background.value).multiplyScalar(0.2);
+  Grid.material.uniforms.fogColor.value.copy(scene.background);
+  VoxelChunk.material.uniforms.ambientIntensity.value = Math.max(Math.min(intensity, 0.7) / 0.7, 0.5) * 0.1;
+  VoxelChunk.material.uniforms.lightIntensity.value = Math.min(1.0 - Math.min(intensity, 0.5) * 2, 0.7);
+  VoxelChunk.material.uniforms.sunlightIntensity.value = Math.min(intensity, 0.7);
+};
+
 const world = new VoxelWorld({
   wasm: '/core/voxels.wasm',
   chunkSize: 32,
@@ -143,8 +155,15 @@ const world = new VoxelWorld({
         { x: 0, z: 1 },
         { x: 1, z: 1 },
       ];
-      scene.onAnimationTick = () => {
+      scene.onAnimationTick = ({ delta }) => {
+        if (light !== targetLight) {
+          const s = delta * 2;
+          updateLight(light + Math.min(Math.max(targetLight - light, -s), s));
+        }
         const { brush, buttons, raycaster } = controls;
+        if (buttons.toggleDown) {
+          targetLight = targetLight === 0 ? 1 : 0;
+        }
         const isPlacingBlock = buttons.secondaryDown;
         const isPlacingLight = buttons.tertiaryDown;
         const isRemoving = buttons.primaryDown;
