@@ -33,6 +33,62 @@ body.pointerlock #cursor {
   border-radius: 8px;
 }
 
+#help {
+  position: absolute;
+  top: 50%;
+  left: 2rem;
+  opacity: 0.8;
+  transform: translate(0, -50%);
+  text-align: center;
+  display: none;
+}
+
+@keyframes help {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; } 
+} 
+
+body.pointerlock #help {
+  display: block;
+  animation-name: help;
+  animation-duration: 6s;
+  animation-fill-mode: both;
+}
+
+#help > div {
+  margin: 2rem 0;
+}
+
+#help > div > svg {
+  fill: #ddd;
+}
+
+#help .keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  width: 126px;
+}
+
+#help .keys > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  background: #222;
+  border: 1px solid #000;
+  border-radius: 4px;
+  width: 40px;
+  height: 40px;
+}
+
+#help .keys > div:first-child {
+  margin: 0 2rem;
+}
+
 #info {
   position: absolute;
   bottom: 1rem;
@@ -52,6 +108,10 @@ body.pointerlock #cursor {
   right: 1rem;
   opacity: 0.8;
   display: flex;
+}
+
+body.pointerlock #light {
+  display: none;
 }
 
 #light > svg {
@@ -89,6 +149,7 @@ body.pointerlock #cursor {
   left: 50%;
   opacity: 0.5;
   transform: translate(-50%, -50%);
+  line-height: 1rem;
 }
 
 #renderer {
