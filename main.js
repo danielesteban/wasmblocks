@@ -59,7 +59,6 @@ const updateLight = (intensity) => {
 
 const world = new VoxelWorld({
   wasm: '/core/voxels.wasm',
-  chunkSize: 32,
   ...(isAnimationTest ? {
     width: 96,
     height: 320,

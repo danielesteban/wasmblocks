@@ -1,7 +1,7 @@
 class VoxelWorld {
   constructor({
     wasm,
-    chunkSize,
+    chunkSize = 32,
     width,
     height,
     depth,
