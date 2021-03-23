@@ -86,32 +86,32 @@ static const unsigned int getLight(
 ) {
   unsigned char ao = 0;
   {
-    const unsigned char v1 = (n1 != -1 && voxels[n1] != TYPE_AIR) ? 1 : 0,
-                        v2 = (n2 != -1 && voxels[n2] != TYPE_AIR) ? 1 : 0,
-                        v3 = (n3 != -1 && voxels[n3] != TYPE_AIR) ? 1 : 0;
-    if (v1 == 1) ao += 20;
-    if (v2 == 1) ao += 20;
-    if ((v1 == 1 && v2 == 1) || v3 == 1) ao += 20;
+    const unsigned char v1 = n1 != -1 && voxels[n1] != TYPE_AIR,
+                        v2 = n2 != -1 && voxels[n2] != TYPE_AIR,
+                        v3 = n3 != -1 && voxels[n3] != TYPE_AIR;
+    if (v1) ao += 20;
+    if (v2) ao += 20;
+    if ((v1 && v2) || v3) ao += 20;
   }
 
   float avgLight = light;
   float avgSunlight = sunlight;
   {
-    const unsigned char v1 = (n1 != -1 && voxels[n1] == TYPE_AIR) ? 1 : 0,
-                        v2 = (n2 != -1 && voxels[n2] == TYPE_AIR) ? 1 : 0,
-                        v3 = (n3 != -1 && voxels[n3] == TYPE_AIR) ? 1 : 0;
+    const unsigned char v1 = n1 != -1 && voxels[n1] == TYPE_AIR,
+                        v2 = n2 != -1 && voxels[n2] == TYPE_AIR,
+                        v3 = n3 != -1 && voxels[n3] == TYPE_AIR;
     unsigned char n = 1;
-    if (v1 == 1) {
+    if (v1) {
       avgLight += voxels[n1 + VOXEL_LIGHT];
       avgSunlight += voxels[n1 + VOXEL_SUNLIGHT];
       n++;
     }
-    if (v2 == 1) {
+    if (v2) {
       avgLight += voxels[n2 + VOXEL_LIGHT];
       avgSunlight += voxels[n2 + VOXEL_SUNLIGHT];
       n++;
     }
-    if ((v1 == 1 || v2 == 1) && v3 == 1) {
+    if ((v1 || v2) && v3) {
       avgLight += voxels[n3 + VOXEL_LIGHT];
       avgSunlight += voxels[n3 + VOXEL_SUNLIGHT];
       n++;
@@ -371,10 +371,10 @@ void generate(
           continue;
         }
         const float n = _fnlFastAbs(fnlGetNoise3D(&noise, x, y, z));
-        unsigned char isBlock = 0;
+        unsigned char isBlock;
         switch (type) {
           case 0: // Default
-            isBlock = (y <= (n * world->height)) ? 1 : 0;
+            isBlock = y <= (n * world->height);
             break;
           case 1: { // Sphere
             const int cx = world->width * 0.5 - x;
@@ -385,11 +385,11 @@ void generate(
               && n > 0.1f
               && (y < 8 || sqrt(cx * cx + cz * cz) >= world->width * 0.05f)
               && sqrt(cx * cx + cy * cy + cz * cz) <= world->width * 0.425f
-            ) ? 1 : 0;
+            );
           }
             break;
         }
-        if (isBlock == 1) {
+        if (isBlock) {
           const unsigned int color = getColorFromNoise(0xFF * n);
           const int heightmapIndex = z * world->width + x;
           voxels[voxel] = TYPE_STONE;
@@ -450,13 +450,13 @@ void simulate(
   // Be aware that running this will make the heightmap data invalid.
   // This method could prolly update it but since it's not needed for
   // the animation test I decided not update it here.
-  const unsigned char invZ = ((step % 4) < 2) ? 1 : 0;
-  const unsigned char invX = ((step % 2) == 0) ? 1 : 0;
+  const unsigned char invZ = (step % 4) < 2;
+  const unsigned char invX = (step % 2) == 0;
   for (int y = 1; y < world->height; y++) {
     for (int sz = 2; sz < world->depth - 2; sz++) {
-      const int z = invZ == 1 ? world->depth - 1 - sz : sz;
+      const int z = invZ ? world->depth - 1 - sz : sz;
       for (int sx = 2; sx < world->width - 2; sx++) {
-        const int x = invX == 1 ? world->width - 1 - sx : sx;
+        const int x = invX ? world->width - 1 - sx : sx;
         const int voxel = getVoxel(world, x, y, z);
         if (voxels[voxel] != TYPE_SAND) {
           continue;
