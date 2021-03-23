@@ -79,7 +79,7 @@ body.pointerlock #cursor {
 }
 
 #light.night > svg:nth-child(2) {
-  background: #009;
+  background: #00a;
   cursor: default;
 }
 
