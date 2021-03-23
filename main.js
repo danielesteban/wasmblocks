@@ -176,6 +176,8 @@ const world = new VoxelWorld({
           const s = delta * 2;
           updateLight(light + Math.min(Math.max(targetLight - light, -s), s));
         }
+
+        // Process input
         const isPlacingBlock = buttons.secondaryDown;
         const isPlacingLight = buttons.tertiaryDown;
         const isRemoving = buttons.primaryDown;
@@ -248,9 +250,6 @@ const world = new VoxelWorld({
       };
     }
 
-    renderer.scene = scene;
-    document.body.removeChild(document.getElementById('loading'));
-
     // Import by drag&drop or clicking the link on the info overlay
     {
       const importFile = (file) => {
@@ -310,5 +309,8 @@ const world = new VoxelWorld({
           })
       ), false);
     }
+
+    renderer.scene = scene;
+    document.body.removeChild(document.getElementById('loading'));
   },
 });
