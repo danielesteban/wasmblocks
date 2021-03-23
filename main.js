@@ -11,8 +11,11 @@ import { Color, Group, Scene } from './vendor/three.js';
 const isAnimationTest = location.hash.substr(2) === 'animation';
 
 const renderer = new Renderer({
-  fps: document.getElementById('fps'),
-  renderer: document.getElementById('renderer'),
+  dom: {
+    fps: document.getElementById('fps'),
+    renderer: document.getElementById('renderer'),
+  },
+  postprocessing: !navigator.userAgent.includes('Mobile'),
 });
 
 const { camera, controls } = renderer;

@@ -6,9 +6,10 @@ import {
   WebGLRenderer,
 } from '../vendor/three.js';
 import Controls from './controls.js';
+import SetupPostProcessing from './postprocessing.js';
 
 class Renderer {
-  constructor(dom) {
+  constructor({ dom, postprocessing }) {
     this.camera = new PerspectiveCamera(70, 1, 0.1, 1000);
     this.clock = new Clock();
     this.controls = new Controls({ camera: this.camera, dom: dom.renderer });
@@ -30,11 +31,15 @@ class Renderer {
     dom.renderer.appendChild(this.renderer.domElement);
     window.addEventListener('resize', this.onResize.bind(this), false);
     this.onResize();
+    if (postprocessing) {
+      this.composer = SetupPostProcessing(this.renderer);
+    }
   }
 
   onAnimationTick() {
     const {
       camera,
+      composer,
       controls,
       clock,
       fps,
@@ -50,7 +55,13 @@ class Renderer {
     if (scene) {
       controls.onAnimationTick(animation);
       scene.onAnimationTick(animation);
-      renderer.render(scene, camera);
+      if (composer) {
+        composer.renderPass.camera = camera;
+        composer.renderPass.scene = scene;
+        composer.render();
+      } else {
+        renderer.render(scene, camera);       
+      }
     }
 
     fps.count += 1;
@@ -63,9 +74,13 @@ class Renderer {
   }
 
   onResize() {
-    const { camera, renderer } = this;
+    const { camera, composer, renderer } = this;
     const { innerWidth: width, innerHeight: height } = window;
     renderer.setSize(width, height);
+    if (composer) {
+      composer.setSize(width, height);
+      renderer.getDrawingBufferSize(composer.shader.uniforms.resolution.value);
+    }
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
   }
