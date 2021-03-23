@@ -550,39 +550,24 @@ void update(
       0
     );
   } else if (current == TYPE_AIR && type != TYPE_AIR) {
-    const unsigned char light = voxels[voxel + VOXEL_LIGHT];
-    if (light != 0) {
-      voxels[voxel + VOXEL_LIGHT] = 0;
-      queueA[0] = voxel;
-      queueA[1] = light;
-      removeLight(
-        VOXEL_LIGHT,
-        world,
-        heightmap,
-        voxels,
-        queueA,
-        2,
-        queueB,
-        queueC,
-        0
-      );
-    }
-    const unsigned char sunlight = voxels[voxel + VOXEL_SUNLIGHT];
-    if (sunlight != 0) {
-      voxels[voxel + VOXEL_SUNLIGHT] = 0;
-      queueA[0] = voxel;
-      queueA[1] = sunlight;
-      removeLight(
-        VOXEL_SUNLIGHT,
-        world,
-        heightmap,
-        voxels,
-        queueA,
-        2,
-        queueB,
-        queueC,
-        0
-      );
+    for (unsigned char channel = VOXEL_LIGHT; channel <= VOXEL_SUNLIGHT; channel++) {
+      const unsigned char light = voxels[voxel + channel];
+      if (light != 0) {
+        voxels[voxel + channel] = 0;
+        queueA[0] = voxel;
+        queueA[1] = light;
+        removeLight(
+          channel,
+          world,
+          heightmap,
+          voxels,
+          queueA,
+          2,
+          queueB,
+          queueC,
+          0
+        );
+      }
     }
   }
   if (type == TYPE_LIGHT) {
