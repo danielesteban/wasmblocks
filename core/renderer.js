@@ -19,7 +19,7 @@ class Renderer {
       lastTick: this.clock.oldTime / 1000,
     };
     this.renderer = new WebGLRenderer({
-      antialias: true,
+      antialias: !postprocessing,
       stencil: false,
       powerPreference: 'high-performance',
     });
