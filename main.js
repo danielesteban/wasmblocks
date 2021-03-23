@@ -42,6 +42,9 @@ let targetLight = 1;
 const toggle = document.getElementById('light');
 if (isAnimationTest) toggle.style.display = 'none';
 const setTargetLight = (target) => {
+  if (light !== targetLight) {
+    return;
+  }
   targetLight = target;
   toggle.className = target >= 0.5 ? 'day' : 'night';
 };
