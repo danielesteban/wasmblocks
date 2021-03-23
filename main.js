@@ -36,6 +36,15 @@ Promise.all([...Array(4)].map(() => (
 
 let light = 0;
 let targetLight = 1;
+const toggle = document.getElementById('light');
+if (isAnimationTest) toggle.style.display = 'none';
+const setTargetLight = (target) => {
+  targetLight = target;
+  toggle.className = target >= 0.5 ? 'day' : 'night';
+};
+[...toggle.getElementsByTagName('svg')].forEach((svg, i) => {
+  svg.addEventListener('click', () => setTargetLight(i === 0 ? 1 : 0), false);
+});
 const updateLight = (intensity) => {
   light = intensity;
   Dome.material.uniforms.background.value.setHex(0x336699).multiplyScalar(Math.max(intensity, 0.05));
@@ -155,13 +164,14 @@ const world = new VoxelWorld({
         { x: 1, z: 1 },
       ];
       scene.onAnimationTick = ({ delta }) => {
+        const { brush, buttons, raycaster } = controls;
+        if (buttons.toggleDown) {
+          // Toggle sunlight when pressing 'L'
+          setTargetLight(targetLight === 0 ? 1 : 0);
+        }
         if (light !== targetLight) {
           const s = delta * 2;
           updateLight(light + Math.min(Math.max(targetLight - light, -s), s));
-        }
-        const { brush, buttons, raycaster } = controls;
-        if (buttons.toggleDown) {
-          targetLight = targetLight === 0 ? 1 : 0;
         }
         const isPlacingBlock = buttons.secondaryDown;
         const isPlacingLight = buttons.tertiaryDown;
