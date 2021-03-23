@@ -16,7 +16,7 @@ class VoxelWorld {
     const queueSize = width * depth * 2;
     const layout = [
       { id: 'voxels', type: Uint8Array, size: width * height * depth * 6 },
-      { id: 'vertices', type: Uint8Array, size: maxFaces * 4 * 6 },
+      { id: 'vertices', type: Uint8Array, size: maxFaces * 4 * 8 },
       { id: 'indices', type: Uint32Array, size: maxFaces * 6 },
       { id: 'heightmap', type: Int32Array, size: width * depth },
       { id: 'queueA', type: Int32Array, size: queueSize },
@@ -87,7 +87,7 @@ class VoxelWorld {
       indices: new ((faces * 4 - 1) <= 65535 ? Uint16Array : Uint32Array)(
         indices.view.subarray(0, faces * 6)
       ),
-      vertices: new Uint8Array(vertices.view.subarray(0, faces * 4 * 6)),
+      vertices: new Uint8Array(vertices.view.subarray(0, faces * 4 * 8)),
     };
   }
 

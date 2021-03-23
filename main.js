@@ -1,4 +1,4 @@
-import './core/music.js';
+// import './core/music.js';
 import Renderer from './core/renderer.js';
 import SFX from './core/sfx.js';
 import VoxelWorld from './core/voxels.js';
