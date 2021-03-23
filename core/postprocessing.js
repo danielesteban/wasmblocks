@@ -8,7 +8,7 @@ import {
   WebGLMultisampleRenderTarget,
 } from '../vendor/three.js';
 
-function SetupPostProcessing (renderer) {
+function SetupComposer(renderer) {
   const size = renderer.getDrawingBufferSize(new Vector2());
   const target = new WebGLMultisampleRenderTarget(
     size.x, size.y, { encoding: sRGBEncoding, format: RGBFormat }
@@ -46,4 +46,4 @@ function SetupPostProcessing (renderer) {
   return composer;
 }
 
-export default SetupPostProcessing;
+export default SetupComposer;
