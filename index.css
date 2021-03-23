@@ -123,6 +123,7 @@ body.pointerlock #light {
   fill: #fff;
   background: #000;
   cursor: pointer;
+  transition: background ease-out .3s;
 }
 
 #light > svg:nth-child(1) {
