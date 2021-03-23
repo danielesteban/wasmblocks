@@ -53,6 +53,7 @@ const updateLight = (intensity) => {
   Dome.material.uniforms.background.value.setHex(0x336699).multiplyScalar(Math.max(intensity, 0.05));
   scene.background.copy(Dome.material.uniforms.background.value).multiplyScalar(0.2);
   Grid.material.uniforms.fogColor.value.copy(scene.background);
+  Grid.material.uniforms.intensity.value = Math.max(intensity, 0.1);
   VoxelChunk.material.uniforms.ambientIntensity.value = Math.max(Math.min(intensity, 0.7) / 0.7, 0.5) * 0.1;
   VoxelChunk.material.uniforms.sunlightIntensity.value = Math.min(intensity, 0.7);
 };
