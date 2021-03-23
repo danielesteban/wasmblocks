@@ -6,7 +6,7 @@ import {
   WebGLRenderer,
 } from '../vendor/three.js';
 import Controls from './controls.js';
-import SetupPostProcessing from './postprocessing.js';
+import SetupComposer from './postprocessing.js';
 
 class Renderer {
   constructor({ dom, postprocessing }) {
@@ -32,7 +32,7 @@ class Renderer {
     window.addEventListener('resize', this.onResize.bind(this), false);
     this.onResize();
     if (postprocessing) {
-      this.composer = SetupPostProcessing(this.renderer);
+      this.composer = SetupComposer(this.renderer);
     }
   }
 
